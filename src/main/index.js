@@ -9,9 +9,13 @@ const { PdfReader } = require('pdfreader');
 const { writeFile, readFile } = require('fs');
 import { faturaLog, consultaPDF, consultaTag, saveData, removeData } from "./backend.js";
 
+autoUpdater.forceDevUpdateConfig = true
+autoUpdater.autoDownload = false
+//console.log(autoUpdater);
+/* const log = require('electron-log');
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
-log.info('App starting...');
+log.info('App starting...'); */
 
 function createWindow() {
   let windowState = windowStateKeeper({
@@ -76,11 +80,12 @@ app.whenReady().then(() => {
 })
 
 app.on('ready', function()  {
-  autoUpdater.checkForUpdates();
+  autoUpdater.checkForUpdatesAndNotify();
 });
 autoUpdater.on('checking-for-update', () => {
 })
 autoUpdater.on('update-available', (info) => {
+  console.log(info)
 })
 autoUpdater.on('update-not-available', (info) => {
 })

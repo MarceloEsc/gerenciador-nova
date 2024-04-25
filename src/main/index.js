@@ -1,12 +1,17 @@
 import { app, shell, BrowserWindow, ipcMain, Notification, nativeTheme } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/favicon.ico?asset'
 const windowStateKeeper = require('electron-window-state');
 
 const { PdfReader } = require('pdfreader');
 const { writeFile, readFile } = require('fs');
 import { faturaLog, consultaPDF, consultaTag, saveData, removeData } from "./backend.js";
+
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+log.info('App starting...');
 
 function createWindow() {
   let windowState = windowStateKeeper({
@@ -68,6 +73,24 @@ app.whenReady().then(() => {
   app.on('activate', function () {    
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('ready', function()  {
+  autoUpdater.checkForUpdates();
+});
+autoUpdater.on('checking-for-update', () => {
+})
+autoUpdater.on('update-available', (info) => {
+})
+autoUpdater.on('update-not-available', (info) => {
+})
+autoUpdater.on('error', (err) => {
+})
+autoUpdater.on('download-progress', (progressObj) => {
+})
+autoUpdater.on('update-downloaded', (info) => {
+  console.log(info);
+  //autoUpdater.quitAndInstall();
 })
 
 app.on('window-all-closed', () => {

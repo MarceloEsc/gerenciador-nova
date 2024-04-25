@@ -69,6 +69,6 @@ console.log(convertMilToDate(new Date()));function convertVTR(vtr) {
 
       return vtr
 }
-
+console.log(process.env);
 /* console.log(convertVTR('FTL9G53')); */
 

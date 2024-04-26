@@ -2,5 +2,4 @@ provider: github
 owner: MarceloEsc
 repo: gerenciador-nova
 private: true
-token: GH_TOKEN
 updaterCacheDirName: gerenciador-nova-update

@@ -25,4 +25,5 @@ publish:
   owner: MarceloEsc
   repo: gerenciador-nova
   private: true
-  token: GH_TOKEN
+  releaseType: "draft"
+  publishAutoUpdate: true

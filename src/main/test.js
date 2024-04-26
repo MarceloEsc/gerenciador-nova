@@ -42,7 +42,7 @@ function convertMilToDate(date) {
 date = date.split('/')
 date = date[2]+'-'+date[1]+'-'+date[0]
 console.log(date);
-console.log(new Date(date)); */
+console.log(new Date(date));
 console.log(convertMilToDate(new Date()));function convertVTR(vtr) {
       const vtr_list = [
             { vtr: 'VTR 25', placa: 'SWX7J40'},
@@ -68,7 +68,7 @@ console.log(convertMilToDate(new Date()));function convertVTR(vtr) {
       })
 
       return vtr
-}
+} */
 console.log(process.env);
 /* console.log(convertVTR('FTL9G53')); */
 

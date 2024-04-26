@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, Notification, nativeTheme } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Notification, nativeTheme, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
@@ -12,10 +12,6 @@ import { faturaLog, consultaPDF, consultaTag, saveData, removeData } from "./bac
 autoUpdater.forceDevUpdateConfig = true
 autoUpdater.autoDownload = false
 //console.log(autoUpdater);
-/* const log = require('electron-log');
-autoUpdater.logger = log;
-autoUpdater.logger.transports.file.level = 'info';
-log.info('App starting...'); */
 
 function createWindow() {
   let windowState = windowStateKeeper({
@@ -73,25 +69,33 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  setTimeout(() => {
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 2000);
 
   app.on('activate', function () {    
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-app.on('ready', function()  {
-  autoUpdater.checkForUpdatesAndNotify();
-});
-autoUpdater.on('checking-for-update', () => {
-})
-autoUpdater.on('update-available', (info) => {
-  console.log(info)
-})
-autoUpdater.on('update-not-available', (info) => {
+autoUpdater.on('update-available', async (info) => {
+  await dialog.showMessageBox(BrowserWindow.getFocusedWindow(),
+  {
+        type: 'question',
+        buttons: ['Atualizar', 'Cancelar'],
+        noLink: true,
+        title: 'Aviso',
+        cancelId: 99,
+        message: 'Atualização disponível, atualizar agora?',
+  }).then(response => {
+        if (response.response === 0) autoUpdater.downloadUpdate()
+  })
+  //autoUpdater.downloadUpdate()
 })
 autoUpdater.on('error', (err) => {
 })
 autoUpdater.on('download-progress', (progressObj) => {
+  //console.log(progressObj);
 })
 autoUpdater.on('update-downloaded', (info) => {
   console.log(info);

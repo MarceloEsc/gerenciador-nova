@@ -4,24 +4,26 @@
   <Button icon="pi" id="themeBtn" @click="toggleColorScheme" severity="contrast" rounded="true" outlined="true" />
 
   <div id="pageOne" class="">
-    <CustomModal type="combustivel" />
+    <CustomModal type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
+      :combHasDateFilter="combHasDateFilter" />
+
     <Button label="Log displayed items" icon="pi pi-exclamation-circle" severity="danger" style="width: 15rem"
       @click="logCurrentTableItems" />
 
     <!-- PAGINATOR BUG paginator :rows="20" :rowsPerPageOptions="[20, 30, 40, 50]" -->
     <DataTable ref="combDataTable" :value="combItems" dataKey="_id" v-model:editingRows="combEditingRows" editMode="row"
       v-model:selection="combEditingRows" @row-edit-save="onRowEditSave($event, 'combustivel')"
-      @row-edit-cancel="console.log($event)" v-model:filters="filters" filterDisplay="row">
+      @row-edit-cancel="console.log($event)" @update:filters="handleFilters($event, 'combustivel')"
+      v-model:filters="filters" filterDisplay="row">
 
       <Column field="date" header="Data" style="width: 20%">
         <template #editor="{ data, field }">
           <Calendar v-model="data[field]" dateFormat="dd/mm/yy" mask="99/99/9999"
-            @date-select="data[field] = convert.convertDateToFormatString($event)" />
+            @update:modelValue="data[field] = convert.convertDateToFormatString($event)" />
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <Calendar v-model="filterModel.value" view="month" dateFormat="mm/yy"
-            @date-select="filterModel.value = convert.convertDateToFormatString($event).slice(3), filterCallback()"
-            style="min-width: 13rem" />
+          <Calendar v-model="filterModel.value" view="month" dateFormat="mm/yy" @date-select="filterModel.value = convert.convertDateToFormatString($event).slice(3),
+            filterCallback()" selectionMode="range" style="min-width: 13rem" />
         </template>
       </Column>
 
@@ -71,13 +73,24 @@
   </div>
 
   <div id="pageTwo" class="is-hidden">
-    <CustomModal type="manutencao" />
+    <CustomModal type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
+      :manHasDateFilter="manHasDateFilter" />
 
-    <DataTable ref="manDataTable" :value="manItems" dataKey="_id">
-      <Column field="date" header="Data" style="width: 20%">
-      </Column>
+    <DataTable ref="manDataTable" :value="manItems" dataKey="_id" @update:filters="handleFilters($event, 'manutencao')"
+      v-model:filters="filters" filterDisplay="row">
 
       <Column field="vtr" header="VTR" style="width: 20%">
+        <template #filter="{ filterModel, filterCallback }">
+          <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtr_list" optionLabel="label"
+            optionValue="label" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
+        </template>
+      </Column>
+
+      <Column field="date" header="Data" style="width: 20%">
+        <template #filter="{ filterModel, filterCallback }">
+          <Calendar v-model="filterModel.value" view="month" dateFormat="mm/yy" @date-select="filterModel.value = convert.convertDateToFormatString($event).slice(3),
+            filterCallback()" selectionMode="range" style="min-width: 13rem" />
+        </template>
       </Column>
 
       <Column field="items" header="Itens" style="width: 20%">
@@ -245,6 +258,7 @@ ipcRenderer.on('requestData:res', (event, res, type) => {
   //REMENBER THIS YOU IIIIIIIIIIIIIDIOT
   else if (type == 'manutencao') {
     manItems.value = []
+    convert.sortDate(res)
     res.forEach(data => {
       data.date = convert.convertDateToFormatString(data.date)
       manItems.value.push(data)
@@ -317,9 +331,57 @@ const vtr_list = ref([
 ])
 
 const filters = ref({
-  date: { value: /* null */convert.convertDateToFormatString(new Date).slice(3), matchMode: FilterMatchMode.CONTAINS },
+  date: { value: null/* convert.convertDateToFormatString(new Date).slice(3) */, matchMode: FilterMatchMode.CONTAINS },
   vtr: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
+
+const combHasDateFilter = ref({ date: null, state: false })
+const combHasVTRFilter = ref({ vtr: null, state: false })
+const manHasDateFilter = ref({ date: null, state: false })
+const manHasVTRFilter = ref({ vtr: null, state: false })
+const handleFilters = (event, type) => {
+  console.log(event);
+  if (type === 'combustivel') {
+    if (event.date.value) {
+      combHasDateFilter.value.state = true
+      combHasDateFilter.value.date = convert.formatMonthString(event.date.value)
+    }
+    else {
+      combHasDateFilter.value.state = false
+      combHasDateFilter.value.date = null
+    }
+    if (event.vtr.value) {
+      combHasVTRFilter.value.state = true
+      combHasVTRFilter.value.vtr = event.vtr.value
+    }
+    else {
+      combHasVTRFilter.value.state = false
+      combHasVTRFilter.value.vtr = event.vtr.value
+    }
+    console.log(combHasDateFilter.value);
+    console.log(combHasVTRFilter.value);
+    return
+  }
+
+  if (event.date.value) {
+    manHasDateFilter.value.state = true
+    manHasDateFilter.value.date = convert.formatMonthString(event.date.value)
+  }
+  else {
+    manHasDateFilter.value.state = false
+    manHasDateFilter.value.date = null
+  }
+  if (event.vtr.value) {
+    manHasVTRFilter.value.state = true
+    manHasDateFilter.value.vtr = event.vtr.value
+  }
+  else {
+    manHasVTRFilter.value.state = false
+    manHasDateFilter.value.vtr = event.vtr.value
+  }
+  console.log(manHasDateFilter.value);
+  console.log(manHasVTRFilter.value);
+}
 
 const onRowEditSave = (event, type, manEditItemData) => {
   //console.log(event)

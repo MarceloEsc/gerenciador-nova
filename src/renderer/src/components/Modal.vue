@@ -1,4 +1,6 @@
 <template>
+      <Toast position="bottom-right" />
+
       <Toolbar>
             <template #start>
                   <Button label="Exportar como..." class="mr-2" severity="secondary" v-if="props.type === 'combustivel'"
@@ -140,6 +142,8 @@
 
 <script setup>
 import { ref } from 'vue';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import Toolbar from 'primevue/toolbar';
 import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
@@ -156,9 +160,11 @@ import TieredMenu from 'primevue/tieredmenu';
 import { v4 as uuidv4 } from 'uuid';
 import { convert } from '../scripts/convert';
 
-const props = defineProps(['type'])
+const props = defineProps(['type', 'combHasVTRFilter', 'combHasDateFilter', 'manHasVTRFilter', 'manHasDateFilter', 'combDataTable', 'manDataTable'])
 
 const ipcRenderer = window.electron.ipcRenderer
+
+const toast = useToast();
 
 const combModalVisible = ref(false)
 const combModalItems = ref([])
@@ -320,17 +326,55 @@ const menu = ref()
 const items = [
       {
             label: 'PDF',
-            icon: 'pi pi-plus',
+            icon: 'pi pi-file-pdf',
             comand: (event, type) => {
                   console.log(type + ' pdf')
+                  if (type == 'combustivel') {
+                        console.log(props.combHasDateFilter);
+                        console.log(props.combHasVTRFilter);
+                        console.log(props.combDataTable.processedData);
+                        if (props.combHasDateFilter.state == false && props.combHasVTRFilter.state == false) {
+                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para poder exportar!', life: 3000 })
+                              return
+                        }
+                        ipcRenderer.send('export:PDF', type, JSON.stringify(props.combHasDateFilter), JSON.stringify(props.combHasVTRFilter), JSON.stringify(props.combDataTable.processedData))
+                        return
+                  }
+                  console.log(props.manHasDateFilter);
+                  console.log(props.manHasVTRFilter);
+                  console.log(props.manDataTable.processedData);
+                  if (props.manHasDateFilter.state == false && props.manHasVTRFilter.state == false) {
+                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para poder exportar!', life: 3000 })
+                        return
+                  }
+                  ipcRenderer.send('export:PDF', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))
             },
       },
       //////////REMENBER THIS YOU IDIOT////////////
       {
             label: 'Excel',
-            icon: 'pi pi-minus',
+            icon: 'pi pi-file-excel',
             comand: (event, type) => {
                   console.log(type + ' excel')
+                  if (type == 'combustivel') {
+                        console.log(props.combHasDateFilter);
+                        console.log(props.combHasVTRFilter);
+                        console.log(props.combDataTable.processedData);
+                        if (props.combHasDateFilter.state == false && props.combHasVTRFilter.state == false) {
+                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para poder exportar!', life: 3000 })
+                              return
+                        }
+                        ipcRenderer.send('export:Excel', type, JSON.stringify(props.combHasDateFilter), JSON.stringify(props.combHasVTRFilter), JSON.stringify(props.combDataTable.processedData))
+                        return
+                  }
+                  console.log(props.manHasDateFilter);
+                  console.log(props.manHasVTRFilter);
+                  console.log(props.manDataTable.processedData);
+                  if (props.manHasDateFilter.state == false && props.manHasVTRFilter.state == false) {
+                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para poder exportar!', life: 3000 })
+                        return
+                  }
+                  ipcRenderer.send('export:Excel', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))
             },
       }
 ]

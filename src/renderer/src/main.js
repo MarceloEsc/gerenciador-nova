@@ -7,7 +7,7 @@ import PrimeVue from 'primevue/config';
 import PrimeVueStyled from 'primevue/styled'
 import PrimeOne from 'primevue/themes/primeone';
 import Aura from 'primevue/themes/primeone/aura';
-
+import ToastService from 'primevue/toastservice';
 import ptBr from './assets/pt-br.json';
 
 
@@ -22,5 +22,6 @@ app.use(PrimeVue, {
             }
       }
 })
+app.use(ToastService);
 app.mount('#app')
 

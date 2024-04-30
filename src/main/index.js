@@ -6,10 +6,11 @@ import icon from '../../resources/favicon.ico?asset'
 const windowStateKeeper = require('electron-window-state');
 
 const { PdfReader } = require('pdfreader');
-const { writeFile, readFile } = require('fs');
+const { writeFileSync, readFile } = require('fs');
 import { faturaLog, consultaPDF, consultaTag, saveData, removeData } from "./backend.js";
+import { montarPDF } from './export.js'
 
-autoUpdater.forceDevUpdateConfig = true
+//autoUpdater.forceDevUpdateConfig = true
 autoUpdater.autoDownload = false
 //console.log(autoUpdater);
 
@@ -48,8 +49,6 @@ function createWindow() {
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -61,9 +60,6 @@ app.whenReady().then(() => {
   nativeTheme.themeSource = 'dark'
   electronApp.setAppUserModelId('com.electron')
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -90,15 +86,16 @@ autoUpdater.on('update-available', async (info) => {
   }).then(response => {
         if (response.response === 0) autoUpdater.downloadUpdate()
   })
-  //autoUpdater.downloadUpdate()
 })
 autoUpdater.on('error', (err) => {
+  dialog.showErrorBox('Erro', err)
 })
 autoUpdater.on('download-progress', (progressObj) => {
   //console.log(progressObj);
 })
 autoUpdater.on('update-downloaded', (info) => {
   console.log(info);
+  //REMEMBER YOU IDIIIIIIIIIIIOT
   //autoUpdater.quitAndInstall();
 })
 
@@ -122,14 +119,9 @@ ipcMain.on('init:GetTheme', (event) => {
   event.reply('init:RecieveTheme', nativeTheme.themeSource)
 });
 
+//TO-DO montar um arquivo de backup e salvar
 ipcMain.on('requestData:all', (event) => {
-  //TO-DO RETORNAR 2 DADOS SEPARADAMENTE PARA CADA LUGAR
-  /* consultaPDF().then(result => {
-    event.reply('requestData:res', result)
-  }) */
-  /* consultaGeral().then(result => {
-    event.reply('requestData:res', result)
-  })   */
+  
 })
 
 ipcMain.on('requestData:Combustivel', (event) => {
@@ -162,3 +154,53 @@ ipcMain.on('requestRemove', (event, doc) => {
   console.log(JSON.parse(doc));
   removeData(JSON.parse(doc))
 });
+
+ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
+  let fileName = ''
+  /* if (type == 'combustivel') fileName = 'Relatório-de-Transações-de-Combustível ' + month
+  if (type == 'manutencao' && month != '' && vtrMonth == false) fileName = 'Relatório-de-Manutenções ' + month
+  if (type == 'manutencao' && month == '') fileName = 'Relatório-de-Manutenções - ' + data[0].VTR
+  if (type == 'manutencao' && month != '' && vtrMonth == true) fileName = 'Relatório-de-Manutenções - ' + data[0].VTR + ' - ' + month
+  fileName = fileName + '.pdf' */
+
+  let result;
+
+  if (type == 'combustivel') {
+    result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+      defaultPath: fileName,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    })
+  }
+  else {
+    result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+      defaultPath: fileName,
+      filters: [{ name: 'PDF', extensions: ['PDF'] }]
+    })
+  }
+  if (result.canceled) return null
+  else {
+    const dir = result.filePath
+    const doc = montarPDF(type, JSON.parse(hasDate), JSON.parse(hasVTR), JSON.parse(data))
+
+    writeFileSync(dir, doc.output(), "ascii");
+    return dir
+  }
+
+    /* console.log(type)
+    console.log(JSON.parse(hasVTR))
+    console.log(JSON.parse(hasDate))
+    console.log(JSON.parse(data)) */
+    const PDF = montarPDF(type, JSON.parse(hasDate), JSON.parse(hasVTR), JSON.parse(data))
+    return
+}
+);
+ipcMain.on('export:Excel', (event, type, hasDate, hasVTR, data) => {
+  if (type == 'combustivel') {
+    console.log(type)
+    console.log(JSON.parse(hasVTR))
+    console.log(JSON.parse(hasDate))
+    console.log(JSON.parse(data))
+    return
+  }
+}
+);

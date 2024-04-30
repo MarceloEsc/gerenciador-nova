@@ -6,12 +6,7 @@ import { convert } from '../renderer/src/scripts/convert';
 let db = new PouchDB('DB', { revs_limit: 1, auto_compaction: true })
 db.info().then(function (info) { console.log(info) })
 
-let rows = [];
-
-function fazerListaFatura(pages) {
-      const page = pages;
-      //console.log(page)
-
+function fazerListaFatura(page) {
       const parseObj = {
             searchValue: [/Data - Tn/gi, /Detalhamento da fatura/i],
             fields: {
@@ -27,66 +22,54 @@ function fazerListaFatura(pages) {
                   unit: 9,
             },
       };
-      let stageCounter = 0;
-
       const keys = Object.keys(parseObj.fields);
-
+      let stageCounter = 0;
       let list = [];
 
       for (let row in page) {
-            //console.log(page[row]);
             if (row.length > 0) {
-                  if (
-                        page[row].join("").search(parseObj.searchValue[stageCounter]) >= 0
-                  ) {
+                  if ( page[row].join("").search(parseObj.searchValue[stageCounter]) >= 0) {
                         stageCounter++;
                         if (stageCounter == parseObj.searchValue.length) stageCounter = 1;
-                        //console.log(page[row][0]);
-                  } else if (stageCounter == parseObj.searchValue.length - 1) {
+                  } 
+                  else if (stageCounter == parseObj.searchValue.length - 1) {
                         if (keys.length == page[row].length) {
                               let data = {};
 
                               keys.forEach((key) => {
                                     const index = parseObj.fields[key];
-
                                     const val = page[row][index];
-                                    //console.log(val)
-
                                     data[key] = val;
                               });
 
                               list.push(data);
-                        } else if (keys.length !== page[row].length) {
+                        } 
+                        else if (keys.length !== page[row].length) {
                               let data2 = {};
                               keys.forEach((key) => {
                                     const index = parseObj.fields[key];
-
                                     const val = page[row][index];
-
                                     data2[key] = val;
                               });
-                              //console.log(data2)
                               list.push(data2);
                         }
                   }
             }
       }
-
       return list;
 }
 
 export async function faturaLog(err, item) {
+      let rows = [];
       if (err) console.error(err);
       else if (!item) {
             // end of file, or page
             let resultado = fazerListaFatura(rows);
             //console.log(resultado)
-
             await handlePDFData(resultado)
             rows = []; // clear rows for next page
-      } else if (item.text) {
-            (rows[item.y] = rows[item.y] || []).push(item.text); // accumulate text items into rows object, per line
       }
+      else if (item.text) (rows[item.y] = rows[item.y] || []).push(item.text);
 }
 
 //RECEBER OS DADOSC DO PDF E SALVAR NO DB
@@ -96,50 +79,30 @@ async function handlePDFData(dadosC) {
 
             dado._id = uuidv4()
             dado.date = convert.convertDateToMilliseconds(dado.date.slice(0, 10))
-            if (dado.driver === undefined) {
-                  dado.driver = null;
-            };
+            if (dado.driver === undefined) dado.driver = null;
 
-            if (dado.price === undefined) {
-                  dado.price = null;
-            } else {
-                  dado.price = parseFloat(dado.price.replace(/,/g, '.'))
-            };
+            if (dado.price === undefined) dado.price = null;
+            else dado.price = parseFloat(dado.price.replace(/,/g, '.'))
+            
+            if (dado.doc === undefined) dado.doc = null;
 
-            if (dado.doc === undefined) {
-                  dado.doc = null;
-            };
+            if (dado.odometer === undefined) dado.odometer = null;
+            else dado.odometer = parseFloat(dado.odometer)
 
-            if (dado.odometer === undefined) {
-                  dado.odometer = null;
-            } else {
-                  dado.odometer = parseFloat(dado.odometer)
-            };
-
-            if (dado.produto === undefined) {
-                  dado.produto = null;
-            };
+            if (dado.produto === undefined) dado.produto = null;
 
             if (dado.lt !== undefined) {
                   dado.lt = dado.lt.slice(0, -1)
                   dado.lt = parseFloat(dado.lt.replace(/,/g, '.'))
-            } else if (dado.lt === undefined) {
-                  dado.lt = null;
+            }
+            else if (dado.lt === undefined) dado.lt = null;
 
-            };
+            if (dado.cost === undefined) dado.cost = null;
+            else dado.cost = parseFloat(dado.cost.replace(/,/g, '.'))
 
-            if (dado.cost === undefined) {
-                  dado.cost = null;
-            } else {
-                  dado.cost = parseFloat(dado.cost.replace(/,/g, '.'))
-            };
-
-            if (dado.unit === undefined) {
-                  dado.unit = null;
-            };
+            if (dado.unit === undefined) dado.unit = null;
 
             dado.vtr = convertVTR(dado.vtr)
-
             dado.tag = 'combustivel'
             
             db.put(dado)
@@ -181,18 +144,14 @@ function convertVTR(vtr) {
  **/
 export async function consultaPDF() {
       let db = new PouchDB('PDFDB', { revs_limit: 1, auto_compaction: true })
-      console.log(2);
 
       return db.allDocs({
             include_docs: true,
       }).then(function (result) {
-            //console.log(result)
-            //console.log(result.rows);
             db.info().then(function (info) { console.log(info) })  
             let docs = result.rows
 
             docs.forEach(doc => {
-                  //console.log(doc.doc);
                   db.remove(doc.doc._id, doc.doc._rev)
             });
             db.destroy();            
@@ -217,6 +176,13 @@ export async function consultaTag(tag) {
           });
 
       //return consultaArray
+}
+
+/**
+ * consultaTudo: retorna todos os dados no banco de dados
+ */
+export async function consultaTudo() {
+
 }
 
 /**

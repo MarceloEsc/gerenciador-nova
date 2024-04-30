@@ -10,12 +10,16 @@ export const convert = {
             date = date[0] + '/' + date[1] + '/' + date[2]
       
             return date
-      },
-      
+      },      
       convertDateToMilliseconds: (date) => {
             date = date.split('/')
             date = date[2]+'/'+date[1]+'/'+date[0]
             return Date.parse(new Date(date))
+      },
+      formatMonthString: (date) => {
+            date = date.split('/')
+            date = date[1]+'/'+date[0]+'/01'
+            return date
       },
 
       formatCurrency: (value) => {

@@ -18,7 +18,8 @@ autoUpdater.autoDownload = false
 function createWindow() {
   let windowState = windowStateKeeper({
     defaultWidth: 1200,
-    defaultHeight: 900
+    defaultHeight: 900,
+    theme: { "themeSource": "light" }
   })
 
   const mainWindow = new BrowserWindow({
@@ -74,7 +75,6 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
-
 autoUpdater.on('update-available', async (info) => {
   await dialog
     .showMessageBox(BrowserWindow.getFocusedWindow(), {

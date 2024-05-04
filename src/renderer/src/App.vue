@@ -7,8 +7,8 @@
     <CustomModal type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
       :combHasDateFilter="combHasDateFilter" />
 
-    <Button label="Log displayed items" icon="pi pi-exclamation-circle" severity="danger" style="width: 15rem"
-      @click="logCurrentTableItems" />
+    <!-- <Button label="Log displayed items" icon="pi pi-exclamation-circle" severity="danger" style="width: 15rem"
+      @click="logCurrentTableItems" /> -->
 
     <!-- PAGINATOR BUG paginator :rows="20" :rowsPerPageOptions="[20, 30, 40, 50]" -->
     <DataTable ref="combDataTable" :value="combItems" dataKey="_id" v-model:editingRows="combEditingRows" editMode="row"
@@ -74,29 +74,30 @@
 
   <div id="pageTwo" class="is-hidden">
     <CustomModal type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
-      :manHasDateFilter="manHasDateFilter" />
+      :manHasDateFilter="manHasDateFilter" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
 
-    <DataTable ref="manDataTable" :value="manItems" dataKey="_id" @update:filters="handleFilters($event, 'manutencao')"
-      v-model:filters="filters" filterDisplay="row">
+    <DataTable ref="manDataTable" :value="manItems" dataKey="_id" >
+      <!-- @update:filters="handleFilters($event, 'manutencao')"
+      v-model:filters="filters" filterDisplay="row" -->
 
-      <Column field="vtr" header="VTR" style="width: 20%">
-        <template #filter="{ filterModel, filterCallback }">
+      <Column field="vtr" header="VTR" style="width: 15%">
+        <!-- <template #filter="{ filterModel, filterCallback }">
           <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtr_list" optionLabel="label"
             optionValue="label" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
-        </template>
+        </template> -->
       </Column>
 
       <Column field="date" header="Data" style="width: 20%">
-        <template #filter="{ filterModel, filterCallback }">
+        <!-- <template #filter="{ filterModel, filterCallback }">
           <Calendar v-model="filterModel.value" view="month" dateFormat="mm/yy" @date-select="filterModel.value = convert.convertDateToFormatString($event).slice(3),
             filterCallback()" selectionMode="range" style="min-width: 13rem" />
-        </template>
+        </template> -->
       </Column>
 
-      <Column field="items" header="Itens" style="width: 20%">
+      <Column field="items" header="Itens" style="width: 30%">
         <template #body="{ data, field }">
           <div v-for="item in data[field]">
-            {{ item.item }} {{ convert.formatCurrency(item.price) }}
+            {{ item.name }} {{ convert.formatCurrency(item.price) }}
           </div>
         </template>
       </Column>
@@ -107,7 +108,7 @@
         </template>
       </Column>
 
-      <Column style="width: 10%; min-width: 8rem" bodyStyle="text-align:center">
+      <!-- <Column style="width: 10%; min-width: 8rem" bodyStyle="text-align:center">
         <template #body="{ data }">
           <Button type="button" label="" icon="pi pi-pencil" severity="info" @click="openEditManutItem($event, data)" />
         </template>
@@ -117,7 +118,7 @@
           <Button type="button" label="Excluir" icon="pi pi-delete-left" severity="danger"
             @click="removeRow($event, data, 'manutencao')" />
         </template>
-      </Column>
+      </Column> -->
     </DataTable>
 
     <!-- TO-DO STYLE THIS MODAL ALREADY IDIOT -->
@@ -161,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 
 //PRIMEVUE COMPONENTS
 import { FilterMatchMode } from 'primevue/api';
@@ -176,11 +177,9 @@ import Dropdown from 'primevue/dropdown';
 import Dialog from 'primevue/dialog';
 import Divider from 'primevue/divider';
 
-
 //CUSTOM COMPONENTS
 import Tabs from './components/Tabs.vue';
 import CustomModal from './components/Modal.vue';
-/* import  from './components/' */
 
 //SCRIPTS
 import { v4 as uuidv4 } from 'uuid';
@@ -243,7 +242,7 @@ const manEditItem = ref({})
 
 
 ipcRenderer.send('requestData:Combustivel')
-ipcRenderer.send('requestData:Manutencao')
+//ipcRenderer.send('requestData:Manutencao')
 ipcRenderer.on('requestData:res', (event, res, type) => {
   if (type == 'combustivel') {
     combItems.value = []
@@ -255,7 +254,6 @@ ipcRenderer.on('requestData:res', (event, res, type) => {
     });
   }
 
-  //REMENBER THIS YOU IIIIIIIIIIIIIDIOT
   else if (type == 'manutencao') {
     manItems.value = []
     convert.sortDate(res)
@@ -266,6 +264,14 @@ ipcRenderer.on('requestData:res', (event, res, type) => {
     console.log(manItems.value);
   }
 })
+
+const importResExcel = (data) => {
+  console.log(data);
+  manItems.value = []
+  data.forEach(item => {
+    manItems.value.push(item)
+  })
+}
 
 //////////////////////////////////////////////////////
 
@@ -331,14 +337,17 @@ const vtr_list = ref([
 ])
 
 const filters = ref({
-  date: { value: null/* convert.convertDateToFormatString(new Date).slice(3) */, matchMode: FilterMatchMode.CONTAINS },
+  date: { value: convert.convertDateToFormatString(new Date).slice(3), matchMode: FilterMatchMode.CONTAINS },
   vtr: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
 const combHasDateFilter = ref({ date: null, state: false })
 const combHasVTRFilter = ref({ vtr: null, state: false })
-const manHasDateFilter = ref({ date: null, state: false })
-const manHasVTRFilter = ref({ vtr: null, state: false })
+const manHasDateFilter = ref()
+const manHasVTRFilter = ref(false)
+const setManState = (date, vtr) => {
+  manHasDateFilter.value = date
+}
 const handleFilters = (event, type) => {
   console.log(event);
   if (type === 'combustivel') {
@@ -363,7 +372,7 @@ const handleFilters = (event, type) => {
     return
   }
 
-  if (event.date.value) {
+ /*  if (event.date.value) {
     manHasDateFilter.value.state = true
     manHasDateFilter.value.date = convert.formatMonthString(event.date.value)
   }
@@ -373,14 +382,14 @@ const handleFilters = (event, type) => {
   }
   if (event.vtr.value) {
     manHasVTRFilter.value.state = true
-    manHasDateFilter.value.vtr = event.vtr.value
+    manHasVTRFilter.value.vtr = event.vtr.value
   }
   else {
     manHasVTRFilter.value.state = false
-    manHasDateFilter.value.vtr = event.vtr.value
+    manHasVTRFilter.value.vtr = event.vtr.value
   }
   console.log(manHasDateFilter.value);
-  console.log(manHasVTRFilter.value);
+  console.log(manHasVTRFilter.value); */
 }
 
 const onRowEditSave = (event, type, manEditItemData) => {

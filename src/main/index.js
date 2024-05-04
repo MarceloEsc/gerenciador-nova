@@ -3,12 +3,13 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/favicon.ico?asset'
-const windowStateKeeper = require('electron-window-state');
+const windowStateKeeper = require('electron-window-state')
 
-const { PdfReader } = require('pdfreader');
-const { writeFileSync, readFile } = require('fs');
-import { faturaLog, consultaPDF, consultaTag, saveData, removeData } from "./backend.js";
+const { PdfReader } = require('pdfreader')
+const { writeFileSync, readFile } = require('fs')
+import { faturaLog, consultaPDF, consultaTag, saveData, removeData } from './backend.js'
 import { montarPDF } from './export.js'
+import { getMetaData, importExcel } from './import.js'
 
 //autoUpdater.forceDevUpdateConfig = true
 autoUpdater.autoDownload = false
@@ -17,8 +18,8 @@ autoUpdater.autoDownload = false
 function createWindow() {
   let windowState = windowStateKeeper({
     defaultWidth: 1200,
-    defaultHeight: 900,
-  });
+    defaultHeight: 900
+  })
 
   const mainWindow = new BrowserWindow({
     x: windowState.x,
@@ -35,7 +36,7 @@ function createWindow() {
     }
   })
 
-  windowState.manage(mainWindow);
+  windowState.manage(mainWindow)
 
   nativeTheme.themeSource = windowState.theme.themeSource
 
@@ -66,26 +67,27 @@ app.whenReady().then(() => {
 
   createWindow()
   setTimeout(() => {
-    autoUpdater.checkForUpdatesAndNotify();
-  }, 2000);
+    autoUpdater.checkForUpdatesAndNotify()
+  }, 2000)
 
-  app.on('activate', function () {    
+  app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
 autoUpdater.on('update-available', async (info) => {
-  await dialog.showMessageBox(BrowserWindow.getFocusedWindow(),
-  {
-        type: 'question',
-        buttons: ['Atualizar', 'Cancelar'],
-        noLink: true,
-        title: 'Aviso',
-        cancelId: 99,
-        message: 'Atualização disponível, atualizar agora?',
-  }).then(response => {
-        if (response.response === 0) autoUpdater.downloadUpdate()
-  })
+  await dialog
+    .showMessageBox(BrowserWindow.getFocusedWindow(), {
+      type: 'question',
+      buttons: ['Atualizar', 'Cancelar'],
+      noLink: true,
+      title: 'Aviso',
+      cancelId: 99,
+      message: 'Atualização disponível, atualizar agora?'
+    })
+    .then((response) => {
+      if (response.response === 0) autoUpdater.downloadUpdate()
+    })
 })
 autoUpdater.on('error', (err) => {
   dialog.showErrorBox('Erro', err)
@@ -94,7 +96,7 @@ autoUpdater.on('download-progress', (progressObj) => {
   //console.log(progressObj);
 })
 autoUpdater.on('update-downloaded', (info) => {
-  console.log(info);
+  console.log(info)
   //REMEMBER YOU IDIIIIIIIIIIIOT
   //autoUpdater.quitAndInstall();
 })
@@ -107,53 +109,50 @@ app.on('window-all-closed', () => {
 
 const toggleTheme = () => {
   let theme = nativeTheme.themeSource
-  if(theme == 'light' || theme == 'system') {
+  if (theme == 'light' || theme == 'system') {
     nativeTheme.themeSource = 'dark'
     return
   }
   nativeTheme.themeSource = 'light'
 }
 
-ipcMain.on('toggleTheme', (event) => toggleTheme());
+ipcMain.on('toggleTheme', (event) => toggleTheme())
 ipcMain.on('init:GetTheme', (event) => {
   event.reply('init:RecieveTheme', nativeTheme.themeSource)
-});
-
-//TO-DO montar um arquivo de backup e salvar
-ipcMain.on('requestData:all', (event) => {
-  
 })
 
-ipcMain.on('requestData:Combustivel', (event) => {
-    consultaTag('combustivel').then(result => event.reply('requestData:res', result, 'combustivel'))
-  }
-);
-ipcMain.on('requestData:Manutencao', (event) => {
-    consultaTag('manutencao').then(result => {
-      event.reply('requestData:res', result, 'manutencao')
-    })
-  }
-);
+//TO-DO montar um arquivo de backup e salvar
+ipcMain.on('requestData:all', (event) => { })
 
-const callParse = new PdfReader();
+ipcMain.on('requestData:Combustivel', (event) => {
+  consultaTag('combustivel').then((result) => event.reply('requestData:res', result, 'combustivel'))
+})
+ipcMain.on('requestData:Manutencao', (event) => {
+  consultaTag('manutencao').then((result) => event.reply('requestData:res', result, 'manutencao'))
+})
+
+const callParse = new PdfReader()
 
 ipcMain.on('sendData:converter-pdf', (event, fullpath) => {
-  console.log('converter ' + fullpath);  
+  console.log('converter ' + fullpath)
   callParse.parseFileItems(fullpath, faturaLog)
 
   setTimeout(() => {
-    consultaPDF().then(result => {
+    consultaPDF().then((result) => {
       //console.log(result)
-      event.reply('retrieveData:converter-pdf', result)})
-  }, 700);
+      event.reply('retrieveData:converter-pdf', result)
+    })
+  }, 700)
 })
 
-ipcMain.on('requestSave', (event, data, type) => {saveData(JSON.parse(data), type)/*  console.log(JSON.parse(data), type); */});
+ipcMain.on('requestSave', (event, data, type) => {
+  saveData(JSON.parse(data), type) /*  console.log(JSON.parse(data), type); */
+})
 
 ipcMain.on('requestRemove', (event, doc) => {
-  console.log(JSON.parse(doc));
+  console.log(JSON.parse(doc))
   removeData(JSON.parse(doc))
-});
+})
 
 ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
   let fileName = ''
@@ -163,7 +162,7 @@ ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
   if (type == 'manutencao' && month != '' && vtrMonth == true) fileName = 'Relatório-de-Manutenções - ' + data[0].VTR + ' - ' + month
   fileName = fileName + '.pdf' */
 
-  let result;
+  let result
 
   if (type == 'combustivel') {
     result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
@@ -182,25 +181,21 @@ ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
     const dir = result.filePath
     const doc = montarPDF(type, JSON.parse(hasDate), JSON.parse(hasVTR), JSON.parse(data))
 
-    writeFileSync(dir, doc.output(), "ascii");
+    writeFileSync(dir, doc.output(), 'ascii')
     return dir
   }
+})
 
-    /* console.log(type)
-    console.log(JSON.parse(hasVTR))
-    console.log(JSON.parse(hasDate))
-    console.log(JSON.parse(data)) */
-    const PDF = montarPDF(type, JSON.parse(hasDate), JSON.parse(hasVTR), JSON.parse(data))
-    return
-}
-);
-ipcMain.on('export:Excel', (event, type, hasDate, hasVTR, data) => {
-  if (type == 'combustivel') {
-    console.log(type)
-    console.log(JSON.parse(hasVTR))
-    console.log(JSON.parse(hasDate))
-    console.log(JSON.parse(data))
+ipcMain.on('import:Excel', async (event, fullpath, type, workSheet) => {
+  if (type == 'load') {
+    getMetaData(fullpath).then(value => {
+      event.reply('importRes:Excel', value, type)
+    })
     return
   }
-}
-);
+  console.log(fullpath);
+  importExcel(fullpath, workSheet).then(value => {
+    console.log(value);
+    event.reply('importRes:Excel', value, type)
+  })
+})

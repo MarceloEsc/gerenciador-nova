@@ -19,7 +19,7 @@ function createWindow() {
   let windowState = windowStateKeeper({
     defaultWidth: 1200,
     defaultHeight: 900,
-    theme: { "themeSource": "light" }
+    theme: { "themeSource": "system" }
   })
 
   const mainWindow = new BrowserWindow({

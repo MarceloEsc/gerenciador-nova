@@ -98,7 +98,7 @@ autoUpdater.on('download-progress', (progressObj) => {
 autoUpdater.on('update-downloaded', (info) => {
   console.log(info)
   //REMEMBER YOU IDIIIIIIIIIIIOT
-  //autoUpdater.quitAndInstall();
+  if (!is.dev) autoUpdater.quitAndInstall();
 })
 
 app.on('window-all-closed', () => {

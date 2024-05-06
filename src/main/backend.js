@@ -1,9 +1,9 @@
 const PouchDB = require('pouchdb');
 PouchDB.plugin(require('pouchdb-find'));
 const { v4: uuidv4 } = require("uuid");
+import { app } from 'electron';
 import { convert } from '../renderer/src/scripts/convert';
-
-let db = new PouchDB('DB', { revs_limit: 1, auto_compaction: true })
+let db = new PouchDB((app.getPath('userData') + '/DB'), { revs_limit: 1, auto_compaction: true })
 db.info().then(function (info) { console.log(info) })
 
 function fazerListaFatura(page) {

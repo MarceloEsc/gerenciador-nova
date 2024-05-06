@@ -258,11 +258,11 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                   doc.line(0, altura - 4.45 + (i * 7), 220, altura - 4.45 + (i * 7), 'S')
             })
       } */
+
       doc.text(`GASTOS GERAIS DE ${hasDate}`, pageWidth / 2, 38.5, { align: 'center' });
       doc.setFontSize(10);
       doc.text("ITENS", 10, 55);
       doc.text("VTR", 110, 55);
-      //doc.text("DATA", 140, 55);
       doc.text("VALOR", 165, 55);
       doc.line(0, 58, 250, 58, 'S')
       doc.setFontSize(8);
@@ -275,7 +275,6 @@ export function montarPDF(type, hasDate, hasVTR, data) {
             doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
 
             doc.text(`${manut.vtr}`, 110, altura + (i2 * 7));
-            //doc.text(`${manut.date}`, 140, altura + (i2 * 7));
             doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
 
             manut.items.forEach(item => {

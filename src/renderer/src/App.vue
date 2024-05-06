@@ -76,22 +76,18 @@
     <CustomModal type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
       :manHasDateFilter="manHasDateFilter" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
 
-    <DataTable ref="manDataTable" :value="manItems" dataKey="_id" >
-      <!-- @update:filters="handleFilters($event, 'manutencao')"
-      v-model:filters="filters" filterDisplay="row" -->
+    <DataTable ref="manDataTable" :value="manItems" dataKey="_id"  @update:filters="handleFilters($event, 'manutencao')"
+      v-model:filters="filtersMan" filterDisplay="row">
+      
 
       <Column field="vtr" header="VTR" style="width: 15%">
-        <!-- <template #filter="{ filterModel, filterCallback }">
+        <template #filter="{ filterModel, filterCallback }">
           <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtr_list" optionLabel="label"
             optionValue="label" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
-        </template> -->
+        </template>
       </Column>
 
       <Column field="date" header="Data" style="width: 20%">
-        <!-- <template #filter="{ filterModel, filterCallback }">
-          <Calendar v-model="filterModel.value" view="month" dateFormat="mm/yy" @date-select="filterModel.value = convert.convertDateToFormatString($event).slice(3),
-            filterCallback()" selectionMode="range" style="min-width: 13rem" />
-        </template> -->
       </Column>
 
       <Column field="items" header="Itens" style="width: 30%">
@@ -122,7 +118,7 @@
     </DataTable>
 
     <!-- TO-DO STYLE THIS MODAL ALREADY IDIOT -->
-    <Dialog v-model:visible="manModal" modal header="Editando" :style="{ width: '50vw', height: '90rem', }">
+    <!-- <Dialog v-model:visible="manModal" modal header="Editando" :style="{ width: '50vw', height: '90rem', }">
       <div>
         <label for="date">Data </label>
         <Calendar v-model="manEditItem.date" dateFormat="dd/mm/yyyy"
@@ -156,7 +152,7 @@
         <Button type="button" label="Salvar" severity="primary"
           @click="onRowEditSave($event, 'manutencao', manEditItem), clearForm()" />
       </div>
-    </Dialog>
+    </Dialog> -->
   </div>
 
 </template>
@@ -174,8 +170,8 @@ import Calendar from 'primevue/calendar';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Dropdown from 'primevue/dropdown';
-import Dialog from 'primevue/dialog';
-import Divider from 'primevue/divider';
+// import Dialog from 'primevue/dialog';
+// import Divider from 'primevue/divider';
 
 //CUSTOM COMPONENTS
 import Tabs from './components/Tabs.vue';
@@ -188,7 +184,7 @@ import { convert } from './scripts/convert';
 const ipcRenderer = window.electron.ipcRenderer
 
 const combItems = ref([
-  {
+  /* {
     _id: 69,
     date: '19/04/2024',
     vtr: 'VTR 24',
@@ -196,12 +192,12 @@ const combItems = ref([
     lt: 69,
     odometer: 69,
     cost: 69
-  }
+  } */
 ])
 const combDataTable = ref();
 
 const manItems = ref([
-  {
+  /* {
     _id: 30,
     date: '19/04/2024',
     vtr: '24',
@@ -234,11 +230,11 @@ const manItems = ref([
     ],
     totalCost: 0,
     tag: 'manutencao'
-  },
+  }, */
 ])
 const manDataTable = ref();
-const manModal = ref(false)
-const manEditItem = ref({})
+/* const manModal = ref(false)
+const manEditItem = ref({}) */
 
 
 ipcRenderer.send('requestData:Combustivel')
@@ -254,7 +250,7 @@ ipcRenderer.on('requestData:res', (event, res, type) => {
     });
   }
 
-  else if (type == 'manutencao') {
+  /* else if (type == 'manutencao') {
     manItems.value = []
     convert.sortDate(res)
     res.forEach(data => {
@@ -262,15 +258,16 @@ ipcRenderer.on('requestData:res', (event, res, type) => {
       manItems.value.push(data)
     });
     console.log(manItems.value);
-  }
+  } */
 })
 
 const importResExcel = (data) => {
-  console.log(data);
+  //console.log(data);
   manItems.value = []
   data.forEach(item => {
     manItems.value.push(item)
   })
+  console.log(manItems.value);
 }
 
 //////////////////////////////////////////////////////
@@ -340,11 +337,14 @@ const filters = ref({
   date: { value: convert.convertDateToFormatString(new Date).slice(3), matchMode: FilterMatchMode.CONTAINS },
   vtr: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
+const filtersMan = ref({
+  vtr: { value: null, matchMode: FilterMatchMode.EQUALS },
+});
 
 const combHasDateFilter = ref({ date: null, state: false })
 const combHasVTRFilter = ref({ vtr: null, state: false })
 const manHasDateFilter = ref()
-const manHasVTRFilter = ref(false)
+const manHasVTRFilter = ref({ vtr: null, state: false })
 const setManState = (date, vtr) => {
   manHasDateFilter.value = date
 }
@@ -372,14 +372,14 @@ const handleFilters = (event, type) => {
     return
   }
 
- /*  if (event.date.value) {
+  /* if (event.date.value) {
     manHasDateFilter.value.state = true
     manHasDateFilter.value.date = convert.formatMonthString(event.date.value)
   }
   else {
     manHasDateFilter.value.state = false
     manHasDateFilter.value.date = null
-  }
+  } */
   if (event.vtr.value) {
     manHasVTRFilter.value.state = true
     manHasVTRFilter.value.vtr = event.vtr.value
@@ -389,7 +389,7 @@ const handleFilters = (event, type) => {
     manHasVTRFilter.value.vtr = event.vtr.value
   }
   console.log(manHasDateFilter.value);
-  console.log(manHasVTRFilter.value); */
+  console.log(manHasVTRFilter.value);
 }
 
 const onRowEditSave = (event, type, manEditItemData) => {
@@ -402,7 +402,7 @@ const onRowEditSave = (event, type, manEditItemData) => {
     combItems.value[index] = { ...newData };
     data = JSON.stringify(combItems.value[index])
   }
-  else if (type == 'manutencao') {
+  /* else if (type == 'manutencao') {
     index = manItems.value.findIndex((obj) => {
       return obj._id == manEditItemData._id
     })
@@ -412,8 +412,7 @@ const onRowEditSave = (event, type, manEditItemData) => {
       manItems.value[index].items.push({ ...item })
     })
     data = JSON.stringify(manItems.value[index])
-    /* console.log(manItems.value[index]); */
-  }
+  } */
   ipcRenderer.send('requestSave', data, 'update');
 }
 
@@ -430,7 +429,7 @@ const removeRow = (event, obj, type) => {
   ipcRenderer.send('requestRemove', obj)
 }
 
-const openEditManutItem = (event, data) => {
+/* const openEditManutItem = (event, data) => {
   manModal.value = !manModal.value
   manEditItem.value = { ...data }
   manEditItem.value.items = []
@@ -438,32 +437,31 @@ const openEditManutItem = (event, data) => {
     manEditItem.value.items.push({ ...item })
   })
   console.log(manEditItem.value.items);
-  /* console.log(manEditItem.value, 'edit'); */
-}
+} */
 
-const newEditItem = (evet, items) => {
+/* const newEditItem = (evet, items) => {
   items.push({
     item: '',
     price: 0
   })
-}
+} */
 
-const removeEditItem = (event, item, items) => {
+/* const removeEditItem = (event, item, items) => {
   let index = items.findIndex((obj) => {
     return obj == item
   })
   items.splice(index, 1)
   getEditTotal(event, items)
-}
+} */
 
-const getEditTotal = (event, items) => {
+/* const getEditTotal = (event, items) => {
   manEditItem.value.totalCost = 0
   items.forEach(item => {
     manEditItem.value.totalCost += item.price
   })
-}
+} */
 
-const clearForm = () => {
+/* const clearForm = () => {
   return
   manEditItem.value = {
     _id: uuidv4(),
@@ -478,7 +476,7 @@ const clearForm = () => {
     totalCost: 0,
     tag: 'manutencao'
   }
-}
+} */
 ///////////////////////////////////////////////////////////
 
 </script>

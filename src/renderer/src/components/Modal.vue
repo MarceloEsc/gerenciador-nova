@@ -25,6 +25,8 @@
             </template>
             <template #center v-if="props.type === 'manutencao'">
                   <!-- ---------------------------------------------------------------------------------------------->
+                  <Button icon="pi pi-upload" label="tudo" @click="importAll('arquivoExcel')" severity="contrast" rounded="true" outlined="true"
+                  style="border: 0; " />
                   <Button icon="pi pi-refresh" @click="confirmImport(selectedPage, 'arquivoExcel')" severity="contrast" rounded="true" outlined="true"
                   style="border: 0; " />
 
@@ -35,8 +37,8 @@
             <template #end>
                   <Button label="Importar PDF" severity="primary" @click="combModalVisible = true"
                         v-if="props.type === 'combustivel'" />
-                  <Button label="Adicionar item/s" severity="primary" @click="manutModalVisible = true"
-                        v-if="props.type === 'manutencao'" disabled />
+                  <!-- <Button label="Adicionar item/s" severity="primary" @click="manutModalVisible = true"
+                        v-if="props.type === 'manutencao'" disabled /> -->
             </template>
       </Toolbar>
 
@@ -112,7 +114,7 @@
             </div>
       </Dialog>
 
-      <Dialog v-model:visible="manutModalVisible" modal header="Preencha os dados"
+      <!-- <Dialog v-model:visible="manutModalVisible" modal header="Preencha os dados"
             :style="{ width: '50vw', height: '90rem' }" v-if="props.type === 'manutencao'"
             @after-hide="manNewItem.value = {}; console.log(manNewItem.value)" @show="openNewManutItem">
 
@@ -150,7 +152,7 @@
                   <Button type="button" label="Salvar" severity="primary" @click="saveData('manutencao')" />
             </div>
 
-      </Dialog>
+      </Dialog> -->
 </template>
 
 <script setup>
@@ -212,12 +214,18 @@ const textPathAndImportExcel = (path) => {
       console.log(fullpath)
       ipcRenderer.send('import:Excel', fullpath, 'load')
 }
-const confirmImport = (selected, path) => {
-      if (selected == 'Vazio') return
-      console.log(selected);
+const confirmImport = (selectedWorksheet, path) => {
+      if (selectedWorksheet == 'Vazio') return
+      console.log(selectedWorksheet);
       let fullpath = document.getElementById(path).files[0].path;
-      emit('manutencaoExportState', selected)
-      ipcRenderer.send('import:Excel', fullpath, 'import', selected)
+      emit('manutencaoExportState', selectedWorksheet)
+      ipcRenderer.send('import:Excel', fullpath, 'import', selectedWorksheet)
+}
+const importAll = (path) => {
+      selectedPage.value = 'Vazio'
+      emit('manutencaoExportState', null)
+      let fullpath = document.getElementById(path).files[0].path;
+      ipcRenderer.send('import:Excel', fullpath, 'all')
 }
 ipcRenderer.on('importRes:Excel', (res, data, type) => {
       if (type == 'load') {
@@ -372,7 +380,7 @@ const items = [
                               toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
                               return
                         }
-                        if (props.combHasDaeFilter.state == false && props.combHasVTRFilter.state == false) {
+                        else if (!props.combHasDateFilter.state && !props.combHasVTRFilter.state) {
                               toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para exportar!', life: 3000 })
                               return
                         }
@@ -382,6 +390,10 @@ const items = [
 
                   if (props.manDataTable.processedData.length == 0) {
                         toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
+                        return
+                  }
+                  else if (!props.manHasDateFilter && !props.manHasVTRFilter.state) {
+                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma VTR para exportar!', life: 3000 })
                         return
                   }
                   ipcRenderer.send('export:PDF', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))

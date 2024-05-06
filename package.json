@@ -1,7 +1,7 @@
 {
   "name": "gerenciador-nova",
-  "version": "0.0.2",
-  "description": "pro meu amigão sam",
+  "version": "0.0.1",
+  "description": "peepoSad",
   "main": "./out/main/index.js",
   "author": "Marcelo",
   "scripts": {
@@ -13,6 +13,7 @@
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
+    "build:winP": "npm run build && electron-builder --win portable",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "publish": "npm run build && electron-builder --win -p always"
@@ -20,7 +21,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
-    "electron-updater": "^6.1.7",
+    "electron-updater": "^6.2.1",
     "electron-window-state": "^5.0.3",
     "exceljs": "^4.4.0",
     "jspdf": "^2.5.1",
@@ -36,8 +37,8 @@
     "@rushstack/eslint-patch": "^1.6.1",
     "@vitejs/plugin-vue": "^5.0.3",
     "@vue/eslint-config-prettier": "^9.0.0",
-    "electron": "^28.2.0",
-    "electron-builder": "^24.9.1",
+    "electron": "^30.0.2",
+    "electron-builder": "^24.13.3",
     "electron-vite": "^2.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-vue": "^9.20.1",

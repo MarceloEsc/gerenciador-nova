@@ -1,4 +1,6 @@
 const Excel = require('exceljs');
+const { v4: uuidv4 } = require("uuid");
+
 export async function getMetaData(fileName) {
       const wb = new Excel.Workbook();
       await wb.xlsx.readFile(fileName);
@@ -17,6 +19,7 @@ export async function importExcel(fileName, workSheet) {
       let items = []
       for (let i = 0; i < columns.length; i++) {
             //console.log('coluna: ' + i);
+            if (sheet.columns[columns[i]] == undefined) return
             let vtrArr = []
             sheet.columns[columns[i]].eachCell((cell, rowNumber) => {
                   if (typeof cell.value == 'number') vtrArr.push(rowNumber)
@@ -54,8 +57,32 @@ export async function importExcel(fileName, workSheet) {
       }
 
       items = unirItems(items)
+      items.forEach(item => {
+            item._id = uuidv4()
+      })
       return items
 }
+
+export async function importExcelAll(fileName) {
+      let sheetsToParse
+      let allItems = []
+      await getMetaData(fileName).then(sheets => { sheetsToParse = sheets })
+      for (let i = 0; i < sheetsToParse.length; i++) {
+            await importExcel(fileName, sheetsToParse[i].label)
+                  .then(items => {
+                        if (items != undefined) {
+                              items.forEach(item => {
+                                    allItems.push(item);
+                              })
+                        }
+                  })
+                  .catch(err => { console.log(err); })
+      }
+      console.log(allItems);
+
+      return allItems
+}
+
 function unirItems(data) {
       let temp = {};
       for (let i = 0; i < data.length; i++) {

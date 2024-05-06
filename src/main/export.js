@@ -12,8 +12,6 @@ export function montarPDF(type, hasDate, hasVTR, data) {
       console.log(hasDate)
       console.log(hasVTR)
       let doc = new jsPDF();
-      const mes = new Date(hasDate.date).toLocaleString('pt-BR', { month: 'long' }).toLocaleUpperCase()
-      const ano = new Date(hasDate.date).toLocaleString('pt-BR', { year: 'numeric' })
       const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
       const logo = readFileSync(join(__dirname, '../../resources/logo.png'), 'base64');
 
@@ -21,6 +19,8 @@ export function montarPDF(type, hasDate, hasVTR, data) {
       doc.setFontSize(15);
 
       if (type == 'combustivel') {
+            const mes = new Date(hasDate.date).toLocaleString('pt-BR', { month: 'long' }).toLocaleUpperCase()
+            const ano = new Date(hasDate.date).toLocaleString('pt-BR', { year: 'numeric' })
             let i = 1
             let total = 0
             let page = 1
@@ -149,8 +149,83 @@ export function montarPDF(type, hasDate, hasVTR, data) {
       let limite = 34
       const fillColor = ['#fff', '#d2deff']
 
-      /* if (hasDate.state && hasVTR.state) {
-            doc.text(`GASTOS GERAIS DE ${mes}/${ano} - ${data[0].vtr}`, pageWidth / 2, 38, { align: 'center' });
+      //VTR E MES
+      if (hasVTR.state && hasDate) {
+            doc.text(`GASTOS GERAIS DE ${data[0].vtr}-${hasDate}`, pageWidth / 2, 38.5, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text("ITENS", 10, 55);
+            doc.text("VTR", 100, 55);
+            doc.text("DATA", 120, 55);
+            doc.text("VALOR", 165, 55);
+            doc.line(0, 58, 250, 58, 'S')
+            doc.setFontSize(8);
+            data.forEach(manut => {
+                  let i2 = i
+
+                  doc.setFillColor(fillColor[1])
+                  doc.rect(0, altura + (i2 * 7) - 4.5, 220, 7, 'F')
+
+                  doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
+
+                  doc.text(`${manut.vtr}`, 100, altura + (i2 * 7));
+                  doc.text(`${manut.date}`, 120, altura + (i2 * 7));
+                  doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
+
+                  manut.items.forEach(item => {
+                        if (i >= limite - 1 && page <= page + 1) {
+                              doc.addPage()
+                              page++
+                              i = 1
+                              altura = 10
+                              limite = 40
+                        }
+                        doc.text(`${item.name} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
+                        i++
+                  })
+
+                  total += manut.totalCost
+                  doc.line(0, altura - 4.45 + (i * 7), 220, altura - 4.45 + (i * 7), 'S')
+            })
+      }
+      //SÓ MES
+      else if (!hasVTR.state && hasDate) {
+            doc.text(`GASTOS GERAIS DE ${hasDate}`, pageWidth / 2, 38.5, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text("ITENS", 10, 55);
+            doc.text("VTR", 120, 55);
+            doc.text("VALOR", 165, 55);
+            doc.line(0, 58, 250, 58, 'S')
+            doc.setFontSize(8);
+            data.forEach(manut => {
+                  let i2 = i
+
+                  doc.setFillColor(fillColor[1])
+                  doc.rect(0, altura + (i2 * 7) - 4.5, 220, 7, 'F')
+
+                  doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
+
+                  doc.text(`${manut.vtr}`, 120, altura + (i2 * 7));
+                  doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
+
+                  manut.items.forEach(item => {
+                        if (i >= limite - 1 && page <= page + 1) {
+                              doc.addPage()
+                              page++
+                              i = 1
+                              altura = 10
+                              limite = 40
+                        }
+                        doc.text(`${item.name} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
+                        i++
+                  })
+
+                  total += manut.totalCost
+                  doc.line(0, altura - 4.45 + (i * 7), 220, altura - 4.45 + (i * 7), 'S')
+            })
+      }
+      //GERAL VTR
+      else if (hasVTR.state && !hasDate) {
+            doc.text(`GASTOS GERAIS DE ${hasVTR.vtr}`, pageWidth / 2, 38.5, { align: 'center' });
             doc.setFontSize(10);
             doc.text("ITENS", 10, 55);
             doc.text("DATA", 120, 55);
@@ -176,8 +251,7 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                               altura = 10
                               limite = 40
                         }
-
-                        doc.text(`- ${item.item} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
+                        doc.text(`${item.name} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
                         i++
                   })
 
@@ -185,113 +259,6 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                   doc.line(0, altura - 4.45 + (i * 7), 220, altura - 4.45 + (i * 7), 'S')
             })
       }
-      else if (hasDate.state && !hasVTR.state) {
-            doc.text(`GASTOS GERAIS DE ${mes}/${ano}`, pageWidth / 2, 38, { align: 'center' });
-            doc.setFontSize(10);
-            doc.text("ITENS", 10, 55);
-            doc.text("VTR", 110, 55);
-            doc.text("DATA", 140, 55);
-            doc.text("VALOR", 165, 55);
-            doc.line(0, 58, 250, 58, 'S')
-            doc.setFontSize(8);
-            data.forEach(manut => {
-                  let i2 = i
-
-                  doc.setFillColor(fillColor[1])
-                  doc.rect(0, altura + (i2 * 7) - 4.5, 220, 7, 'F')
-
-                  doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
-
-                  doc.text(`${manut.vtr}`, 110, altura + (i2 * 7));
-                  doc.text(`${manut.date}`, 140, altura + (i2 * 7));
-                  doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
-
-                  manut.items.forEach(item => {
-                        if (i >= limite - 1 && page <= page + 1) {
-                              doc.addPage()
-                              page++
-                              i = 1
-                              altura = 10
-                              limite = 40
-                        }
-                        doc.text(`- ${item.item} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
-                        i++
-                  })
-
-                  total += manut.totalCost
-                  doc.line(0, altura - 4.45 + (i * 7), 220, altura - 4.45 + (i * 7), 'S')
-            })
-      }
-      else {
-            doc.text(`GASTOS GERAIS DE ${data[0].vtr}`, pageWidth / 2, 38, { align: 'center' });
-            doc.setFontSize(10);
-            doc.text("ITENS", 10, 55);
-            doc.text("DATA", 120, 55);
-            doc.text("VALOR", 165, 55);
-            doc.line(0, 58, 250, 58, 'S')
-            doc.setFontSize(8);
-            data.forEach(manut => {
-                  let i2 = i
-
-                  doc.setFillColor(fillColor[1])
-                  doc.rect(0, altura + (i2 * 7) - 4.5, 220, 7, 'F')
-
-                  doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
-
-                  doc.text(`${manut.date}`, 120, altura + (i2 * 7));
-                  doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
-
-                  manut.items.forEach(item => {
-                        if (i >= limite - 1 && page <= page + 1) {
-                              doc.addPage()
-                              page++
-                              i = 1
-                              altura = 10
-                              limite = 40
-                        }
-
-                        doc.text(`- ${item.item} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
-                        i++
-                  })
-
-                  total += manut.totalCost
-                  doc.line(0, altura - 4.45 + (i * 7), 220, altura - 4.45 + (i * 7), 'S')
-            })
-      } */
-
-      doc.text(`GASTOS GERAIS DE ${hasDate}`, pageWidth / 2, 38.5, { align: 'center' });
-      doc.setFontSize(10);
-      doc.text("ITENS", 10, 55);
-      doc.text("VTR", 110, 55);
-      doc.text("VALOR", 165, 55);
-      doc.line(0, 58, 250, 58, 'S')
-      doc.setFontSize(8);
-      data.forEach(manut => {
-            let i2 = i
-
-            doc.setFillColor(fillColor[1])
-            doc.rect(0, altura + (i2 * 7) - 4.5, 220, 7, 'F')
-
-            doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
-
-            doc.text(`${manut.vtr}`, 110, altura + (i2 * 7));
-            doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
-
-            manut.items.forEach(item => {
-                  if (i >= limite - 1 && page <= page + 1) {
-                        doc.addPage()
-                        page++
-                        i = 1
-                        altura = 10
-                        limite = 40
-                  }
-                  doc.text(`${item.name} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
-                  i++
-            })
-
-            total += manut.totalCost
-            doc.line(0, altura - 4.45 + (i * 7), 220, altura - 4.45 + (i * 7), 'S')
-      })
 
       doc.movePage(1, doc.getNumberOfPages());
       doc.setFontSize(12);

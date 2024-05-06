@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, Notification, nativeTheme, dialog }
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
+import { watch } from 'fs'
 import icon from '../../resources/favicon.ico?asset'
 const windowStateKeeper = require('electron-window-state')
 
@@ -17,6 +18,8 @@ autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.autoRunAppAfterInstall = true
 //console.log(autoUpdater);
 
+let mainWindow
+
 function createWindow() {
   let windowState = windowStateKeeper({
     defaultWidth: 1200,
@@ -24,7 +27,7 @@ function createWindow() {
     theme: { "themeSource": "system" }
   })
 
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     x: windowState.x,
     y: windowState.y,
     width: windowState.width,
@@ -163,9 +166,11 @@ ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
   let fileName = ''
   //manutenção-mes-2024
   if (type == 'combustivel') {
-    let date = hasDate.date.split('/')
-    console.log(date);
-    date = date[1] + '-' + date[0]
+    let date
+    if (hasDate.state) {
+      date = hasDate.date.split('/')
+      date = date[1] + '-' + date[0]
+    }
     if (hasDate.state && hasVTR.state) fileName = 'Combustível-' + data[0].vtr + '-' + date
     else if (hasDate.state && !hasVTR.state) fileName = 'Combustível-' + date
     else if (!hasDate.state && hasVTR.state) fileName = 'Combustível-' + data[0].vtr
@@ -178,32 +183,62 @@ ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
   }
   fileName = fileName + '.pdf'
 
-  let result
-
-  if (type == 'combustivel') {
-    console.log(fileName);
-    result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
-      defaultPath: fileName,
-      filters: [{ name: 'PDF', extensions: ['pdf'] }]
-    })
-  }
-  else {
-    result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
-      defaultPath: fileName,
-      filters: [{ name: 'PDF', extensions: ['pdf'] }]
-    })
-  }
+  console.log(fileName);
+  let result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    defaultPath: fileName,
+    filters: [{ name: 'PDF', extensions: ['pdf'] }]
+  })
   if (result.canceled) return null
   else {
     const dir = result.filePath
-    const doc = montarPDF(type, JSON.parse(hasDate), JSON.parse(hasVTR), JSON.parse(data))
+    const doc = montarPDF(type, hasDate, hasVTR, data)
 
     writeFileSync(dir, doc.output(), 'ascii')
     return dir
   }
 })
 
+let watcher = null
+let excelPath, excelType, excelWorkSheet
+
+const watcherFunc = (eventname, filename) => {
+  if (eventname == 'change') {
+    console.log(eventname); console.log(filename);
+    if (excelType == 'load') {
+      getMetaData(excelPath).then(value => {
+        mainWindow.webContents.send('importRes:Excel', value, excelType)
+      })
+      return
+    }
+    else if (excelType == 'all') {
+      importExcelAll(excelPath).then(items => {
+        mainWindow.webContents.send('importRes:Excel', items, excelType)
+      }).catch(err => {
+        console.log(err);
+      })
+      return
+    }
+    importExcel(excelPath, excelWorkSheet).then(value => {
+      console.log(value);
+      mainWindow.webContents.send('importRes:Excel', value, excelType)
+    })
+  }
+}
+
 ipcMain.on('import:Excel', async (event, fullpath, type, workSheet) => {
+  excelPath = fullpath
+  excelType = type
+  excelWorkSheet = workSheet
+  if (watcher) {
+    watcher.close()
+    watcher = null
+  }
+  if (!fullpath) {
+    return
+  }
+  console.log(fullpath);
+  watcher = watch(fullpath, watcherFunc)
+
   if (type == 'load') {
     getMetaData(fullpath).then(value => {
       event.reply('importRes:Excel', value, type)
@@ -218,7 +253,6 @@ ipcMain.on('import:Excel', async (event, fullpath, type, workSheet) => {
     })
     return
   }
-  console.log(fullpath);
   importExcel(fullpath, workSheet).then(value => {
     console.log(value);
     event.reply('importRes:Excel', value, type)

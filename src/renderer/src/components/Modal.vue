@@ -25,10 +25,10 @@
             </template>
             <template #center v-if="props.type === 'manutencao'">
                   <!-- ---------------------------------------------------------------------------------------------->
-                  <Button icon="pi pi-upload" label="tudo" @click="importAll('arquivoExcel')" severity="contrast" rounded="true" outlined="true"
-                  style="border: 0; " />
-                  <Button icon="pi pi-refresh" @click="confirmImport(selectedPage, 'arquivoExcel')" severity="contrast" rounded="true" outlined="true"
-                  style="border: 0; " />
+                  <!-- <Button icon="pi pi-upload" label="tudo" @click="importAll('arquivoExcel')" severity="contrast" rounded="true" outlined="true"
+                  style="border: 0; " /> -->
+                  <!-- <Button icon="pi pi-refresh" @click="confirmImport(selectedPage, 'arquivoExcel')" severity="contrast" rounded="true" outlined="true"
+                  style="border: 0; " /> -->
 
                   <Dropdown v-model="selectedPage" :options="excelPages" placeholder="Escolha a página" optionLabel="label" optionValue="label"
                           style="min-width: 7.2rem" class="excel-drop" @change="confirmImport(selectedPage, 'arquivoExcel')"/>
@@ -210,26 +210,37 @@ ipcRenderer.on('retrieveData:converter-pdf', (res, dataRes) => {
 
 const manutencaoExportState = ref([])
 const textPathAndImportExcel = (path) => {
-      let fullpath = document.getElementById(path).files[0].path;
-      console.log(fullpath)
-      ipcRenderer.send('import:Excel', fullpath, 'load')
+      let fullpath = document.getElementById(path).files
+      if (fullpath.length > 0) {
+            fullpath = fullpath[0].path;
+            ipcRenderer.send('import:Excel', fullpath, 'load')
+            return
+      }
+      ipcRenderer.send('import:Excel', null)
+      excelPages.value = [{label: 'Vazio'}]
 }
 const confirmImport = (selectedWorksheet, path) => {
       if (selectedWorksheet == 'Vazio') return
       console.log(selectedWorksheet);
       let fullpath = document.getElementById(path).files[0].path;
+      if (selectedWorksheet == 'Tudo') {
+            emit('manutencaoExportState', null)
+            ipcRenderer.send('import:Excel', fullpath, 'all')
+            return
+      }
       emit('manutencaoExportState', selectedWorksheet)
       ipcRenderer.send('import:Excel', fullpath, 'import', selectedWorksheet)
 }
-const importAll = (path) => {
+/* const importAll = (path) => {
       selectedPage.value = 'Vazio'
       emit('manutencaoExportState', null)
       let fullpath = document.getElementById(path).files[0].path;
       ipcRenderer.send('import:Excel', fullpath, 'all')
-}
+} */
 ipcRenderer.on('importRes:Excel', (res, data, type) => {
       if (type == 'load') {
             excelPages.value = data
+            excelPages.value.unshift({label: 'Tudo'})
             return
       }
       console.log(data);

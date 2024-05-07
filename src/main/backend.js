@@ -77,7 +77,7 @@ export async function faturaLog(err, item) {
 //RECEBER OS DADOSC DO PDF E SALVAR NO DB
 async function handlePDFData(dadosC) {
       let db = new PouchDB('PDFDB', { revs_limit: 1, auto_compaction: true })
-      dadosC.forEach(dado => {
+      dadosC.forEach(async dado => {
 
             dado._id = uuidv4()
             dado.date = convert.convertDateToMilliseconds(dado.date.slice(0, 10))
@@ -104,7 +104,7 @@ async function handlePDFData(dadosC) {
 
             if (dado.unit === undefined) dado.unit = null;
 
-            dado.vtr = convertVTR(dado.vtr)
+            dado.vtr = await convertVTR(dado.vtr)
             dado.tag = 'combustivel'
 
             db.put(dado)
@@ -114,30 +114,11 @@ async function handlePDFData(dadosC) {
 }
 
 //TO-DO - ADICIONAR UMA FORMA DE EDITAR A LISTA DE VTR
-function convertVTR(vtr) {
-      const vtr_list = [
-            { vtr: 'VTR 25', placa: 'SWX7J40' },
-            { vtr: 'VTR 26', placa: 'FUS8A67' },
-            { vtr: 'VTR 27', placa: 'GIQ8F05' },
-            { vtr: 'VTR 28', placa: 'GED7C04' },
-            { vtr: 'VTR 29', placa: 'EZU2242' },
-            { vtr: 'VTR 30', placa: 'GDN5B92' },
-            { vtr: 'VTR 31', placa: 'DMC2E19' },
-            { vtr: 'VTR 32', placa: 'FJN3A42' },
-            { vtr: 'VTR 33', placa: 'FTL9G53' },
-            { vtr: 'VTR 34', placa: 'GBK4J07' },
-            { vtr: 'VTR 35', placa: 'FRR6H75' },
-            { vtr: 'VTR 36', placa: 'GHX0C34' },
-            { vtr: 'VTR 37', placa: 'FGJ2H91' },
-            { vtr: 'VTR 38', placa: 'FVV5I21' },
-            { vtr: 'VTR 39', placa: 'GBJ9J34' },
-            { vtr: 'VTR 40', placa: 'CUM4C25' },
-            { vtr: 'VTR 41', placa: 'GIF2G21' }
-      ]
-      vtr_list.forEach(veiculo => {
-            if (vtr == veiculo.placa) vtr = veiculo.vtr
-      })
-
+async function convertVTR(vtr) {
+      const vtr_list = await getVTRList()
+      for (let i = 0; i < vtr_list.length; i++) {
+            if (vtr == vtr_list[i].placa) return vtr_list[i].label
+      }
       return vtr
 }
 
@@ -218,5 +199,103 @@ export function removeData(dado) {
       return */
       db.get(dado._id).then(function (doc) {
             return db.remove(doc);
+      });
+}
+
+export async function exportDB() {
+      return db.allDocs({
+            include_docs: true,
+      }).then(function (result) {
+            let array = []
+
+            result.rows.forEach(item => {
+                  array.push(item.doc)
+            })
+            return array
+      }).catch(function (err) {
+            console.log(err);
+      });
+}
+
+export async function importDB(dados) {
+      await db.allDocs({
+            include_docs: true,
+      }).then(result => {
+            result.rows.forEach(doc => {
+                  db.remove(doc.doc._id, doc.doc._rev)
+            });
+      }).catch(err => {
+            console.log(err);
+      });
+
+      dados.forEach(dado => {
+            db.put(dado)
+      })
+      db.info().then(function (info) { console.log(info) })
+}
+
+export async function getVTRList(list) {
+      let newList
+      await db.find({
+            selector: { tag: 'vtr' },
+      }).then(async result => {
+            if (result.docs.length == 0) {
+                  list.forEach(item => {
+                        item._id = uuidv4()
+                        item.tag = 'vtr'
+                        db.put(item)
+                  })
+                  await db.find({
+                        selector: { tag: 'vtr' },
+                  }).then(result => {
+                        newList = result.docs
+                  })
+            }
+            else {
+                  newList = result.docs
+            }
+      }).catch(err => {
+            console.log(err);
+      });
+      //console.log(newList);
+      newList.sort((a, b) => { return a.label.localeCompare(b.label) })
+      return newList
+}
+
+export async function useVTRList(list) {
+      /* await db.find({
+            selector: { tag: 'vtr' },
+      }).then(result => {
+            result.docs.forEach(doc => {
+                  db.remove(doc)
+            })
+      })
+      return */
+      list.forEach(item => {
+            if (item._id == undefined) item._id = uuidv4()
+            item.tag = 'vtr'
+            db.put(item)
+      })
+}
+
+export async function saveVTR(data) {
+      db.put(data).catch(err => {
+            db.get(data._id).then(doc => {
+                  data._rev = doc._rev
+                  return db.put(data);
+            })
+      })
+}
+
+export async function changeBulkVTR(oldVTR, newVTR) {
+      await db.find({
+            selector: { vtr: oldVTR.label },
+      }).then(function (result) {
+            result.docs.forEach(doc => {
+                  doc.vtr = newVTR.label
+                  db.put(doc)
+            })
+      }).catch(function (err) {
+            console.log(err);
       });
 }

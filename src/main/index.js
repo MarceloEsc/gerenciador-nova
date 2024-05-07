@@ -7,8 +7,8 @@ import icon from '../../resources/favicon.ico?asset'
 const windowStateKeeper = require('electron-window-state')
 
 const { PdfReader } = require('pdfreader')
-const { writeFileSync, readFile } = require('fs')
-import { faturaLog, consultaPDF, consultaTag, saveData, removeData } from './backend.js'
+const { writeFileSync, readFileSync } = require('fs')
+import { faturaLog, consultaPDF, consultaTag, saveData, removeData, changeBulkVTR, importDB, exportDB, getVTRList, useVTRList, saveVTR } from './backend.js'
 import { montarPDF } from './export.js'
 import { getMetaData, importExcel, importExcelAll } from './import.js'
 
@@ -125,6 +125,18 @@ ipcMain.on('init:GetTheme', (event) => {
   event.reply('init:RecieveTheme', nativeTheme.themeSource)
 })
 
+ipcMain.on('getVTRList', async (event, VTRlist) => {
+  VTRlist = JSON.parse(VTRlist)
+  /* useVTRList(VTRlist)
+  return */
+  let list = await getVTRList(VTRlist)
+  event.reply('recVTRList', list)
+})
+
+ipcMain.on('saveVTR', (event, data) => {
+  saveVTR(JSON.parse(data))
+})
+
 //TO-DO montar um arquivo de backup e salvar
 ipcMain.on('requestData:all', (event) => { })
 
@@ -156,6 +168,11 @@ ipcMain.on('requestSave', (event, data, type) => {
 ipcMain.on('requestRemove', (event, doc) => {
   console.log(JSON.parse(doc))
   removeData(JSON.parse(doc))
+})
+
+ipcMain.on('changeBulkVTR', async (event, oldData, newData) => {
+  await changeBulkVTR(JSON.parse(oldData), JSON.parse(newData))
+  consultaTag('combustivel').then((result) => event.reply('requestData:res', result, 'combustivel'))
 })
 
 ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
@@ -258,3 +275,48 @@ ipcMain.on('import:Excel', async (event, fullpath, type, workSheet) => {
     event.reply('importRes:Excel', value, type)
   })
 })
+
+ipcMain.on('export:DB', async (event) => {
+  let date = new Date().toLocaleDateString().replace(/\//g, '-')
+  let result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
+    defaultPath: `DB-backup-${date}.json`,
+    filters: [{ name: 'JSON', extensions: ['json'] }]
+  })
+  if (result.canceled) return null
+  let backup
+  await exportDB().then(items => { backup = JSON.stringify(items, null, 2) })
+  try {
+    writeFileSync(result.filePath, backup)
+    console.log(result.filePath);
+  } catch (err) {
+    event.reply('DB:result', '', 'error')
+    return
+  }
+  event.reply('DB:result', result.filePath, 'export')
+})
+
+ipcMain.on('import:DB', async (event) => {
+  let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    filters: [{ name: 'JSON', extensions: ['json'] }]
+  })
+  if (result.canceled) return
+  let backup = readFileSync(result.filePaths[0])
+  await importDB(JSON.parse(backup)).then(val => {
+    event.reply('DB:result', backup, 'import')
+  }).catch(err => {
+    event.reply('DB:result', '', 'error')
+  })
+})
+
+setInterval(async () => {
+  let date = new Date().toLocaleDateString().replace(/\//g, '-')
+  let backup
+  await exportDB().then(items => { backup = JSON.stringify(items, null, 2) })
+  try {
+    writeFileSync((app.getPath('userData') + `/DB-backup-${date}.json`), backup)
+    console.log((app.getPath('userData') + `/DB-backup-${date}.json`));
+  } catch (err) {
+    console.log(err);
+    return
+  }
+}, 600000);

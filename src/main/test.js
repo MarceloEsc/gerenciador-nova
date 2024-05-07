@@ -86,4 +86,4 @@ function convertDate(item) {
 
 }
 
-console.log(new Date('março'));
+console.log(new Date().toLocaleString());

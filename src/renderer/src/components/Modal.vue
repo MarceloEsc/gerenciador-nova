@@ -175,7 +175,7 @@ import TieredMenu from 'primevue/tieredmenu';
 import { v4 as uuidv4 } from 'uuid';
 import { convert } from '../scripts/convert';
 
-const props = defineProps(['type', 'combHasVTRFilter', 'combHasDateFilter','manHasVTRFilter', 'manHasDateFilter',  'combDataTable', 'manDataTable'])
+const props = defineProps(['type', 'combHasVTRFilter', 'combHasDateFilter','manHasVTRFilter', 'manHasDateFilter',  'combDataTable', 'manDataTable', 'vtr_list'])
 const emit = defineEmits(['importResExcel', 'manutencaoExportState'])
 
 const ipcRenderer = window.electron.ipcRenderer
@@ -293,20 +293,17 @@ const removeRow = (id, type) => {
 }
 
 const addNewItem = (type) => {
-      if (type == 'combustivel') {
-            const obj = {
-                  _id: uuidv4(),
-                  date: convert.convertDateToFormatString(new Date()),
-                  vtr: '',
-                  driver: '',
-                  lt: 0,
-                  odometer: 0,
-                  cost: 0,
-            }
-            combModalItems.value.push(obj)
-            return
+      const obj = {
+            _id: uuidv4(),
+            date: convert.convertDateToFormatString(new Date()),
+            vtr: '',
+            driver: '',
+            lt: 0,
+            odometer: 0,
+            cost: 0,
       }
-      console.log(obj);
+      combModalItems.value.push(obj)
+      return
 }
 
 const manNewItem = ref({})
@@ -359,7 +356,7 @@ const clearForm = (typeC) => {
       manutEditingRows.value = []
 }
 
-const vtr_list = ref([
+/* const vtr_list = ref([
       { label: 'VTR 25' },
       { label: 'VTR 26' },
       { label: 'VTR 27' },
@@ -377,7 +374,7 @@ const vtr_list = ref([
       { label: 'VTR 39' },
       { label: 'VTR 40' },
       { label: 'VTR 41' }
-])
+]) */
 const menu = ref()
 const toggle = (event) => menu.value.toggle(event);
 const items = [

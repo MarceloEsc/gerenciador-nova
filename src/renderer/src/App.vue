@@ -1,11 +1,13 @@
 <template>
   <Tabs @tab="changeTab" />
+  <Config id="configMenu" class="is-hidden" @closeMenu="toggleMenu" :vtr_list="vtr_list" @removeVTR="removeVTR" @saveVTR="saveVTR" />
 
   <Button icon="pi" id="themeBtn" @click="toggleColorScheme" severity="contrast" rounded="true" outlined="true" />
+  <Button icon="pi pi-cog" id="configBtn" @click="toggleMenu" severity="contrast" rounded="true" outlined="true" />
 
   <div id="pageOne" class="">
     <CustomModal type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
-      :combHasDateFilter="combHasDateFilter" />
+      :combHasDateFilter="combHasDateFilter" :vtr_list="vtr_list" />
 
     <!-- <Button label="Log displayed items" icon="pi pi-exclamation-circle" severity="danger" style="width: 15rem"
       @click="logCurrentTableItems" /> -->
@@ -74,7 +76,7 @@
 
   <div id="pageTwo" class="is-hidden">
     <CustomModal type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
-      :manHasDateFilter="manHasDateFilter" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
+      :manHasDateFilter="manHasDateFilter" :vtr_list="vtr_list" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
 
     <DataTable ref="manDataTable" :value="manItems" dataKey="_id"  @update:filters="handleFilters($event, 'manutencao')"
       v-model:filters="filtersMan" filterDisplay="row">
@@ -176,6 +178,7 @@ import Dropdown from 'primevue/dropdown';
 //CUSTOM COMPONENTS
 import Tabs from './components/Tabs.vue';
 import CustomModal from './components/Modal.vue';
+import Config from './components/Config.vue';
 
 //SCRIPTS
 import { v4 as uuidv4 } from 'uuid';
@@ -299,6 +302,10 @@ const toggleColorScheme = (event) => {
   ipcRenderer.send('toggleTheme')
 }
 
+const toggleMenu = (event) => {
+  document.getElementById('configMenu').classList.toggle('is-hidden')
+}
+
 ipcRenderer.send('init:GetTheme');
 ipcRenderer.on('init:RecieveTheme', (event, theme) => {
   let icon;
@@ -314,24 +321,43 @@ ipcRenderer.on('init:RecieveTheme', (event, theme) => {
 const combEditingRows = ref([]);
 
 const vtr_list = ref([
-  { label: 'VTR 25' },
-  { label: 'VTR 26' },
-  { label: 'VTR 27' },
-  { label: 'VTR 28' },
-  { label: 'VTR 29' },
-  { label: 'VTR 30' },
-  { label: 'VTR 31' },
-  { label: 'VTR 32' },
-  { label: 'VTR 33' },
-  { label: 'VTR 34' },
-  { label: 'VTR 35' },
-  { label: 'VTR 36' },
-  { label: 'VTR 37' },
-  { label: 'VTR 38' },
-  { label: 'VTR 39' },
-  { label: 'VTR 40' },
-  { label: 'VTR 41' },
+  { label: 'VTR 25', placa: 'SWX7J40' },
+  { label: 'VTR 26', placa: 'FUS8A67' },
+  { label: 'VTR 27', placa: 'GIQ8F05' },
+  { label: 'VTR 28', placa: 'GED7C04' },
+  { label: 'VTR 29', placa: 'EZU2242' },
+  { label: 'VTR 30', placa: 'GDN5B92' },
+  { label: 'VTR 31', placa: 'DMC2E19' },
+  { label: 'VTR 32', placa: 'FJN3A42' },
+  { label: 'VTR 33', placa: 'FTL9G53' },
+  { label: 'VTR 34', placa: 'GBK4J07' },
+  { label: 'VTR 35', placa: 'FRR6H75' },
+  { label: 'VTR 36', placa: 'GHX0C34' },
+  { label: 'VTR 37', placa: 'FGJ2H91' },
+  { label: 'VTR 38', placa: 'FVV5I21' },
+  { label: 'VTR 39', placa: 'GBJ9J34' },
+  { label: 'VTR 40', placa: 'CUM4C25' },
+  { label: 'VTR 41', placa: 'GIF2G21' }
 ])
+
+ipcRenderer.send('getVTRList', JSON.stringify(vtr_list.value))
+ipcRenderer.on('recVTRList', (event, list) => {
+  console.log(list);
+  if (list.length > 0) vtr_list.value = list  
+})
+//SWX7J40 VTR 25
+const removeVTR = (data) => {
+  vtr_list.value = vtr_list.value.filter(val => val._id !== data._id);
+  ipcRenderer.send('requestRemove', JSON.stringify(data))
+}
+
+const saveVTR = (oldData, newdata) => {
+  vtr_list.value = vtr_list.value.filter(val => val._id !== newdata._id);
+  vtr_list.value.unshift(newdata)
+  vtr_list.value = vtr_list.value.sort((a, b) => { return a.label.localeCompare(b.label) })
+  ipcRenderer.send('saveVTR', JSON.stringify(newdata))
+  ipcRenderer.send('changeBulkVTR', JSON.stringify(oldData), JSON.stringify(newdata))
+}
 
 const filters = ref({
   date: { value: convert.convertDateToFormatString(new Date).slice(3), matchMode: FilterMatchMode.CONTAINS },
@@ -502,7 +528,7 @@ const removeRow = (event, obj, type) => {
 @import 'primeicons/primeicons.css';
 
 html {
-  overflow: auto;
+  overflow: hidden;
 }
 
 body,
@@ -515,17 +541,29 @@ body,
   flex-direction: column;
 }
 
+#app>.card {
+  margin: 0;
+  box-shadow: none;
+}
+
 #app>#pageOne,
 #app>#pageTwo {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  overflow: auto
+}
+
+#configBtn {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
 }
 
 #themeBtn {
   position: absolute;
   top: 0.3rem;
-  right: 0.3rem;
+  right: 3.6rem;
 }
 
 .p-datatable.p-component.p-datatable-responsive-scroll {

@@ -1,0 +1,173 @@
+<template>
+      <div class="view">
+            <Toast position="bottom-right" />
+            <div class="navbar">
+                  <Button type="button" id="menuBtn" @click="emit('closeMenu')" severity="primary" label="voltar" icon="pi pi-angle-left" />
+                  <p class="titulo">
+                        Configurações
+                  </p>
+            </div>
+            <div class="inside">                  
+                  <p class="divider">                  
+                        <Button type="button" @click="exportDB" label="Exportar" severity="primary" />
+                        Faz um backup portatil dos seus dados
+                  </p>
+                  <p class="divider">                  
+                        <Button type="button" @click="importDB" label="Importar" severity="primary" />
+                        Importa backup feito pelo programa
+                  </p>
+                  <p class="divider">                  
+                        <Button type="button" @click="modalVisible = true" label="Gerenciar VTRs" severity="primary" />
+                  </p>
+                  <Dialog v-model:visible="modalVisible" modal :style="{ width: '600px'}" class="vtr-modal">
+                        <Button type="button" @click="newRow" label="Criar novo" severity="primary" style="margin-bottom: 20px" />
+
+                        <DataTable ref="vtrRef" :value="props.vtr_list" editMode="row" v-model:editingRows="editingList" 
+                        @row-edit-save="saveVTR($event)"
+                        @row-edit-cancel="console.log($event)">
+
+                              <Column field="label" header="VTR" style="width: 150px">
+                                    <template #editor="{ data, field }">
+                                          <InputText v-model="data[field]" style="width: 100px" @update:modelValue="data[field] = $event.toLocaleUpperCase()" />
+                                    </template>
+                              </Column>
+
+                              <Column field="placa" header="Placa" style="width: 150px">
+                                    <template #editor="{ data, field }">
+                                          <InputText v-model="data[field]"style="width: 100px" @update:modelValue="data[field] = $event.toLocaleUpperCase()"/>
+                                    </template>
+                              </Column>
+
+                              <Column :rowEditor="true"  bodyStyle="text-align:center" style="width: 100px" />
+
+                              <Column bodyStyle="text-align:center">
+                                    <template #body="{ data, field }">
+                                          <Button type="button" icon="pi pi-times" severity="danger" @click="removeRow($event, data)" />
+                                    </template>
+                              </Column>
+                        </DataTable>
+                  </Dialog>
+            </div>
+      </div>
+</template>
+<script setup>
+import { ref } from 'vue';
+import { v4 as uuidv4 } from 'uuid';
+
+import Dialog from 'primevue/dialog';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import InputText from 'primevue/inputtext';
+import Button from "primevue/button";
+
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
+console.log('version '+window.electron.process.env.npm_package_version);
+
+const props = defineProps(['vtr_list'])
+const emit = defineEmits(['closeMenu', 'removeVTR', 'saveVTR'])
+const ipcRenderer = window.electron.ipcRenderer
+
+const exportDB = () => {
+      ipcRenderer.send('export:DB')
+}
+const importDB = () => {
+      ipcRenderer.send('import:DB')
+}
+ipcRenderer.on('DB:result', (path, type) => {
+      if (type == 'error') {
+            toast.add({ severity: 'error', detail: 'Houve um erro', life: 3000 })
+            return
+      }
+      else if (type == 'export') {
+            toast.add({ severity: 'success', detail: `DB exportado para:${path}`, life: 3000 })
+            return
+      }
+      ipcRenderer.send('requestData:Combustivel')
+      toast.add({ severity: 'success', detail: `Importado com sucesso`, life: 3000 })
+})
+
+const vtrRef = ref()
+const editingList = ref([])
+const modalVisible = ref(false)
+
+const removeRow = (event, data) => { emit('removeVTR', data) }
+
+const saveVTR = (event) => {
+      let newD = false
+      if (event.data.label !== event.newData.label) newD = true
+      else if (event.data.placa !== event.newData.placa) newD = true
+
+      if (newD) emit('saveVTR', event.data, event.newData)
+}
+const newRow = () => {
+      props.vtr_list.unshift({
+            label: "novo",
+            placa: "novo",
+            tag: "vtr",
+            _id: uuidv4(),
+      })
+}
+
+</script>
+<style scoped>
+      .view {
+            position: absolute;
+            height: 100%;
+            max-height: 100%;
+            width: 100%;
+            z-index: 2;
+            /* padding: 0 5rem; */
+            user-select: none;
+            overflow: hidden
+      }
+      .navbar {
+            position: fixed;
+            width: 100%;
+            height: 70px;
+            padding: 15px 5rem;
+            right: 0;
+            z-index: 2;
+      }
+      .inside {
+            max-height: 92%;
+            overflow: auto;
+            margin-top: 4.3rem;
+            padding: 1.3rem 5rem;
+      }
+
+      .titulo {
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+      }
+      .divider {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+      }
+      Button {
+            margin-right: 15px;
+      }      
+      @media (prefers-color-scheme: dark) {
+            .view {
+                  background: #1b1f29;
+            }
+            .navbar {
+                  background: #14161a;
+            }
+      }
+      @media (prefers-color-scheme: light) {
+            .view {
+                  background: #fff;
+            }
+            .navbar {
+                  background: #bbb;
+            }
+      }
+
+</style>
+<style>
+      .vtr-modal>.p-dialog-content {
+            overflow-y: auto;
+      }
+</style>

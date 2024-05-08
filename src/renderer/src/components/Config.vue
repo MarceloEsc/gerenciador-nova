@@ -51,7 +51,7 @@
       </div>
 </template>
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
 
 import Dialog from 'primevue/dialog';
@@ -75,17 +75,20 @@ const exportDB = () => {
 const importDB = () => {
       ipcRenderer.send('import:DB')
 }
-ipcRenderer.on('DB:result', (path, type) => {
-      if (type == 'error') {
-            toast.add({ severity: 'error', detail: 'Houve um erro', life: 3000 })
-            return
-      }
-      else if (type == 'export') {
-            toast.add({ severity: 'success', detail: `DB exportado para:${path}`, life: 3000 })
-            return
-      }
-      ipcRenderer.send('requestData:Combustivel')
-      toast.add({ severity: 'success', detail: `Importado com sucesso`, life: 3000 })
+
+onMounted(() => {
+      ipcRenderer.on('DB:result', (path, type) => {
+            if (type == 'error') {
+                  toast.add({ severity: 'error', detail: 'Houve um erro', life: 3000 })
+                  return
+            }
+            else if (type == 'export') {
+                  toast.add({ severity: 'success', detail: `DB exportado para:${path}`, life: 3000 })
+                  return
+            }
+            ipcRenderer.send('requestData:Combustivel')
+            toast.add({ severity: 'success', detail: `Importado com sucesso`, life: 3000 })
+      })
 })
 
 const vtrRef = ref()
@@ -118,7 +121,6 @@ const newRow = () => {
             max-height: 100%;
             width: 100%;
             z-index: 2;
-            /* padding: 0 5rem; */
             user-select: none;
             overflow: hidden
       }

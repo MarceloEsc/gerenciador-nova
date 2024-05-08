@@ -1,13 +1,15 @@
 <template>
   <Tabs @tab="changeTab" />
-  <Config id="configMenu" class="is-hidden" @closeMenu="toggleMenu" :vtr_list="vtr_list" @removeVTR="removeVTR" @saveVTR="saveVTR" />
+  <Config id="configMenu" v-if="toggleConfigMenu" @closeMenu="toggleMenu" :vtr_list="vtr_list" @removeVTR="removeVTR" @saveVTR="saveVTR" />
 
   <Button icon="pi" id="themeBtn" @click="toggleColorScheme" severity="contrast" rounded="true" outlined="true" />
   <Button icon="pi pi-cog" id="configBtn" @click="toggleMenu" severity="contrast" rounded="true" outlined="true" />
 
-  <div id="pageOne" class="">
-    <CustomModal type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
-      :combHasDateFilter="combHasDateFilter" :vtr_list="vtr_list" />
+  <div id="pageOne">
+      <CustomToolbar type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
+        :combHasDateFilter="combHasDateFilter" :vtr_list="vtr_list" @openModal="handleModalVisibility" />
+      <CustomModal type="combustivel" :combDataTable="combDataTable" :vtr_list="vtr_list"
+      v-model="combModalVisible" @closeModal="handleModalVisibility" v-if="combModalVisible" />
 
     <!-- <Button label="Log displayed items" icon="pi pi-exclamation-circle" severity="danger" style="width: 15rem"
       @click="logCurrentTableItems" /> -->
@@ -73,14 +75,14 @@
 
     </DataTable>
   </div>
-
   <div id="pageTwo" class="is-hidden">
-    <CustomModal type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
+    <CustomToolbar type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
       :manHasDateFilter="manHasDateFilter" :vtr_list="vtr_list" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
+    <!-- <CustomModal type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
+      :manHasDateFilter="manHasDateFilter" :vtr_list="vtr_list" @importResExcel="importResExcel" @manutencaoExportState="setManState" /> -->
 
     <DataTable ref="manDataTable" :value="manItems" dataKey="_id"  @update:filters="handleFilters($event, 'manutencao')"
-      v-model:filters="filtersMan" filterDisplay="row">
-      
+      v-model:filters="filtersMan" filterDisplay="row">      
 
       <Column field="vtr" header="VTR" style="width: 15%">
         <template #filter="{ filterModel, filterCallback }">
@@ -105,62 +107,12 @@
           {{ convert.formatCurrency(data[field]) }}
         </template>
       </Column>
-
-      <!-- <Column style="width: 10%; min-width: 8rem" bodyStyle="text-align:center">
-        <template #body="{ data }">
-          <Button type="button" label="" icon="pi pi-pencil" severity="info" @click="openEditManutItem($event, data)" />
-        </template>
-      </Column>
-      <Column style="width: 10%; min-width: 8rem" bodyStyle="text-align:center">
-        <template #body="{ data }">
-          <Button type="button" label="Excluir" icon="pi pi-delete-left" severity="danger"
-            @click="removeRow($event, data, 'manutencao')" />
-        </template>
-      </Column> -->
     </DataTable>
-
-    <!-- TO-DO STYLE THIS MODAL ALREADY IDIOT -->
-    <!-- <Dialog v-model:visible="manModal" modal header="Editando" :style="{ width: '50vw', height: '90rem', }">
-      <div>
-        <label for="date">Data </label>
-        <Calendar v-model="manEditItem.date" dateFormat="dd/mm/yyyy"
-          @date-select="manEditItem.date = convert.convertDateToFormatString($event)" />
-        <Divider />
-        <label for="vtr"> VTR </label>
-        <Dropdown v-model="manEditItem.vtr" :options="vtr_list" optionLabel="label" optionValue="label"
-          :placeholder="manEditItem.vtr" class="p-column-filter" style="min-width: 7.2rem" />
-        <Divider />
-        <div>
-          <Button type="button" label="Novo item" icon="pi pi-plus" severity="primary"
-            @click="newEditItem($event, manEditItem.items)" />
-        </div>
-        <div v-for="item in manEditItem.items" class="items-box">
-          <label for="item">Item </label>
-          <InputText v-model="item.item" style="width: 5rem" class="input-number-editor" />
-          <label for="price">Preço </label>
-          <InputNumber v-model="item.price" locale="pt-BR" :minFractionDigits="2" style="width: 5rem"
-            class="input-number-editor" @update:modelValue="getEditTotal($event, manEditItem.items)" />
-          <Button type="button" icon="pi pi-minus" severity="danger"
-            @click="removeEditItem($event, item, manEditItem.items)" />
-        </div>
-        <Divider />
-
-        <label for="edit-total-cost">Total </label>
-        <InputNumber v-model="manEditItem.totalCost" locale="pt-BR" :minFractionDigits="2" style="width: 5rem"
-          class="input-number-editor" />
-      </div>
-      <div class="flex justify-content-end gap-2">
-        <Button type="button" label="Cancelar" severity="secondary" @click="manModal = !manModal" />
-        <Button type="button" label="Salvar" severity="primary"
-          @click="onRowEditSave($event, 'manutencao', manEditItem), clearForm()" />
-      </div>
-    </Dialog> -->
   </div>
-
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 //PRIMEVUE COMPONENTS
 import { FilterMatchMode } from 'primevue/api';
@@ -169,7 +121,6 @@ import Button from "primevue/button";
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Calendar from 'primevue/calendar';
-import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Dropdown from 'primevue/dropdown';
 // import Dialog from 'primevue/dialog';
@@ -178,6 +129,7 @@ import Dropdown from 'primevue/dropdown';
 //CUSTOM COMPONENTS
 import Tabs from './components/Tabs.vue';
 import CustomModal from './components/Modal.vue';
+import CustomToolbar from './components/Toolbar.vue'
 import Config from './components/Config.vue';
 
 //SCRIPTS
@@ -236,33 +188,22 @@ const manItems = ref([
   }, */
 ])
 const manDataTable = ref();
-/* const manModal = ref(false)
-const manEditItem = ref({}) */
 
-
-ipcRenderer.send('requestData:Combustivel')
-//ipcRenderer.send('requestData:Manutencao')
-ipcRenderer.on('requestData:res', (event, res, type) => {
-  if (type == 'combustivel') {
-    combItems.value = []
-    console.log(res);
-    convert.sortDate(res)
-    res.forEach(data => {
-      data.date = convert.convertDateToFormatString(data.date)
-      combItems.value.push(data)
-    });
-  }
-
-  /* else if (type == 'manutencao') {
-    manItems.value = []
-    convert.sortDate(res)
-    res.forEach(data => {
-      data.date = convert.convertDateToFormatString(data.date)
-      manItems.value.push(data)
-    });
-    console.log(manItems.value);
-  } */
+onMounted(() => {
+  ipcRenderer.send('requestData:Combustivel')
+  ipcRenderer.on('requestData:res', (event, res, type) => {
+    if (type == 'combustivel') {
+      combItems.value = []
+      console.log(res);
+      convert.sortDate(res)
+      res.forEach(data => {
+        data.date = convert.convertDateToFormatString(data.date)
+        combItems.value.push(data)
+      });
+    }
+  })
 })
+
 
 const importResExcel = (data) => {
   //console.log(data);
@@ -275,17 +216,19 @@ const importResExcel = (data) => {
 
 //////////////////////////////////////////////////////
 
+const activeTab = ref('comb')
 const changeTab = (tab) => {
+  //activeTab.value = tab
   let pageOne = document.getElementById('pageOne')
   let pageTwo = document.getElementById('pageTwo')
 
   if (tab == 'comb') {
-    pageOne.classList.remove('is-hidden')
-    pageTwo.classList.add('is-hidden')
+    pageOne.classList.toggle('is-hidden')
+    pageTwo.classList.toggle('is-hidden')
     return
   }
-  pageTwo.classList.remove('is-hidden')
-  pageOne.classList.add('is-hidden')
+  pageTwo.classList.toggle('is-hidden')
+  pageOne.classList.toggle('is-hidden')
 }
 const logCurrentTableItems = () => {
   console.log(combDataTable.value.processedData);
@@ -302,20 +245,28 @@ const toggleColorScheme = (event) => {
   ipcRenderer.send('toggleTheme')
 }
 
+const toggleConfigMenu = ref(false)
 const toggleMenu = (event) => {
-  document.getElementById('configMenu').classList.toggle('is-hidden')
+  toggleConfigMenu.value = !toggleConfigMenu.value
+  /* document.getElementById('configMenu').classList.toggle('is-hidden') */
 }
 
-ipcRenderer.send('init:GetTheme');
-ipcRenderer.on('init:RecieveTheme', (event, theme) => {
-  let icon;
-  let element = document.getElementById('themeBtn').firstElementChild.classList
-  if (theme == 'light') icon = 'pi-sun'
-  else { icon = 'pi-moon' }
-  element.add(icon)
-  /* console.log(icon);console.log(element); */
-});
+onMounted(() => {
+  ipcRenderer.send('init:GetTheme');
+  ipcRenderer.on('init:RecieveTheme', (event, theme) => {
+    let icon;
+    let element = document.getElementById('themeBtn').firstElementChild.classList
+    if (theme == 'light') icon = 'pi-sun'
+    else { icon = 'pi-moon' }
+    element.add(icon)
+    /* console.log(icon);console.log(element); */
+  });
+})
 
+const combModalVisible = ref(false)
+const handleModalVisibility = (value) => {
+  combModalVisible.value = value
+}
 ///////////////////////////////////////////////////////////
 
 const combEditingRows = ref([]);
@@ -340,12 +291,14 @@ const vtr_list = ref([
   { label: 'VTR 41', placa: 'GIF2G21' }
 ])
 
-ipcRenderer.send('getVTRList', JSON.stringify(vtr_list.value))
-ipcRenderer.on('recVTRList', (event, list) => {
-  console.log(list);
-  if (list.length > 0) vtr_list.value = list  
+onMounted(() => {
+  ipcRenderer.send('getVTRList', JSON.stringify(vtr_list.value))
+  ipcRenderer.on('recVTRList', (event, list) => {
+    console.log(list);
+    if (list.length > 0) vtr_list.value = list  
+  })
 })
-//SWX7J40 VTR 25
+
 const removeVTR = (data) => {
   vtr_list.value = vtr_list.value.filter(val => val._id !== data._id);
   ipcRenderer.send('requestRemove', JSON.stringify(data))
@@ -398,14 +351,6 @@ const handleFilters = (event, type) => {
     return
   }
 
-  /* if (event.date.value) {
-    manHasDateFilter.value.state = true
-    manHasDateFilter.value.date = convert.formatMonthString(event.date.value)
-  }
-  else {
-    manHasDateFilter.value.state = false
-    manHasDateFilter.value.date = null
-  } */
   if (event.vtr.value) {
     manHasVTRFilter.value.state = true
     manHasVTRFilter.value.vtr = event.vtr.value
@@ -423,86 +368,20 @@ const onRowEditSave = (event, type, manEditItemData) => {
   let { newData, index } = event;
   let data;
 
-  if (type == 'combustivel') {
+  combItems.value[index] = { ...newData };
+  data = JSON.stringify(combItems.value[index])
 
-    combItems.value[index] = { ...newData };
-    data = JSON.stringify(combItems.value[index])
-  }
-  /* else if (type == 'manutencao') {
-    index = manItems.value.findIndex((obj) => {
-      return obj._id == manEditItemData._id
-    })
-    manItems.value[index] = { ...manEditItemData };
-    manItems.value[index].items = []
-    manEditItemData.items.forEach(item => {
-      manItems.value[index].items.push({ ...item })
-    })
-    data = JSON.stringify(manItems.value[index])
-  } */
   ipcRenderer.send('requestSave', data, 'update');
 }
 
 const removeRow = (event, obj, type) => {
   console.log(obj)
   /* console.log(combItems.value.indexOf(obj)); */
-  if (type == 'combustivel') {
-    combItems.value = combItems.value.filter(val => val._id !== obj._id);
-    console.log(combItems.value);
-  } else {
-    manItems.value = manItems.value.filter(val => val._id !== obj._id);
-  }
+  combItems.value = combItems.value.filter(val => val._id !== obj._id);
+  console.log(combItems.value);
   obj = JSON.stringify(obj)
   ipcRenderer.send('requestRemove', obj)
 }
-
-/* const openEditManutItem = (event, data) => {
-  manModal.value = !manModal.value
-  manEditItem.value = { ...data }
-  manEditItem.value.items = []
-  data.items.forEach(item => {
-    manEditItem.value.items.push({ ...item })
-  })
-  console.log(manEditItem.value.items);
-} */
-
-/* const newEditItem = (evet, items) => {
-  items.push({
-    item: '',
-    price: 0
-  })
-} */
-
-/* const removeEditItem = (event, item, items) => {
-  let index = items.findIndex((obj) => {
-    return obj == item
-  })
-  items.splice(index, 1)
-  getEditTotal(event, items)
-} */
-
-/* const getEditTotal = (event, items) => {
-  manEditItem.value.totalCost = 0
-  items.forEach(item => {
-    manEditItem.value.totalCost += item.price
-  })
-} */
-
-/* const clearForm = () => {
-  return
-  manEditItem.value = {
-    _id: uuidv4(),
-    date: new Date(),
-    vtr: '',
-    items: [
-      {
-        item: '',
-        price: 0,
-      },
-    ],
-    totalCost: 0,
-    tag: 'manutencao'
-  }
-} */
 ///////////////////////////////////////////////////////////
 
 </script>

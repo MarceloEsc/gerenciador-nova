@@ -1,48 +1,5 @@
 <template>
-      <Toast position="bottom-right" />
-
-      <Toolbar>
-            <template #start>
-                  <Button label="Exportar como..." class="mr-2" severity="secondary" @click="toggle"
-                        aria-haspopup="true" aria-controls="overlay_tmenu" />
-
-                  <TieredMenu ref="menu" id="overlay_tmenu" :model="items" popup>
-                        <template #item="{ item }">
-                              <!-- TO-DO EXPORTAR COMBUSTIVEL PARA EXCEL -->
-                              <div v-if="item.label != 'Excel' && props.type == 'combustivel'" @click="if (props.type == 'combustivel') item.comand($event, 'combustivel');
-                              else item.comand($event, 'manutencao')" class="tiered-menu-item">
-                                    <span :class="item.icon" style="margin-right: 10px;"></span>
-                                    <span style="font-weight: 500;">{{ item.label }}</span>
-                              </div>
-
-                              <div v-if="props.type == 'manutencao'" @click="if (props.type == 'combustivel') item.comand($event, 'combustivel');
-                              else item.comand($event, 'manutencao')" class="tiered-menu-item">
-                                    <span :class="item.icon" style="margin-right: 10px;"></span>
-                                    <span style="font-weight: 500;">{{ item.label }}</span>
-                              </div>
-                        </template>
-                  </TieredMenu>
-            </template>
-            <template #center v-if="props.type === 'manutencao'">
-                  <!-- ---------------------------------------------------------------------------------------------->
-                  <!-- <Button icon="pi pi-upload" label="tudo" @click="importAll('arquivoExcel')" severity="contrast" rounded="true" outlined="true"
-                  style="border: 0; " /> -->
-                  <!-- <Button icon="pi pi-refresh" @click="confirmImport(selectedPage, 'arquivoExcel')" severity="contrast" rounded="true" outlined="true"
-                  style="border: 0; " /> -->
-
-                  <Dropdown v-model="selectedPage" :options="excelPages" placeholder="Escolha a página" optionLabel="label" optionValue="label"
-                          style="min-width: 7.2rem" class="excel-drop" @change="confirmImport(selectedPage, 'arquivoExcel')"/>
-                  <input type="file" id="arquivoExcel" accept=".xlsx" @change="textPathAndImportExcel('arquivoExcel')" class="pdf-input">
-            </template>
-            <template #end>
-                  <Button label="Importar PDF" severity="primary" @click="combModalVisible = true"
-                        v-if="props.type === 'combustivel'" />
-                  <!-- <Button label="Adicionar item/s" severity="primary" @click="manutModalVisible = true"
-                        v-if="props.type === 'manutencao'" disabled /> -->
-            </template>
-      </Toolbar>
-
-      <Dialog v-model:visible="combModalVisible" modal header="Escolha o PDF"
+      <Dialog v-model:visible="combModalVisibleCopy" modal header="Escolha o PDF"
             :style="{ width: '95vw', height: '90rem', }" v-if="props.type === 'combustivel'" :position="'top'"
             @after-hide="clearForm('combustivel')" @show="console.log(props.type)">
 
@@ -108,57 +65,15 @@
             </DataTable>
 
             <div class="flex justify-content-end gap-2">
-                  <Button type="button" label="Cancelar" severity="secondary" @click="combModalVisible = false" />
+                  <Button type="button" label="Cancelar" severity="secondary" @click="emit('closeModal', false)" />
                   <Button type="button" label="Salvar" severity="primary"
                         @click="saveData('combustivel'), clearForm('combustivel')" />
             </div>
       </Dialog>
-
-      <!-- <Dialog v-model:visible="manutModalVisible" modal header="Preencha os dados"
-            :style="{ width: '50vw', height: '90rem' }" v-if="props.type === 'manutencao'"
-            @after-hide="manNewItem.value = {}; console.log(manNewItem.value)" @show="openNewManutItem">
-
-            <div>
-                  <label for="date">Data </label>
-                  <Calendar v-model="manNewItem.date" dateFormat="dd/mm/yyyy"
-                        @date-select="manNewItem.date = convert.convertDateToFormatString($event)" />
-                  <Divider />
-                  <label for="vtr"> VTR </label>
-                  <Dropdown v-model="manNewItem.vtr" :options="vtr_list" optionLabel="label" optionValue="label"
-                        :placeholder="manNewItem.vtr" class="p-column-filter" style="min-width: 7.2rem" />
-                  <Divider />
-                  <div>
-                        <Button type="button" label="Novo item" icon="pi pi-plus" severity="primary"
-                              @click="newEditItem($event, manNewItem.items)" />
-                  </div>
-                  <div v-for="item in manNewItem.items" class="items-box">
-                        <label for="item">Item </label>
-                        <InputText v-model="item.item" style="width: 5rem" class="input-number-editor" />
-                        <label for="price">Preço </label>
-                        <InputNumber v-model="item.price" locale="pt-BR" :minFractionDigits="2" style="width: 5rem"
-                              class="input-number-editor" @update:modelValue="getEditTotal($event, manNewItem.items)" />
-                        <Button type="button" icon="pi pi-minus" severity="danger"
-                              @click="removeEditItem($event, item, manNewItem.items)" />
-                  </div>
-                  <Divider />
-
-                  <label for="edit-total-cost">Total </label>
-                  <InputNumber v-model="manNewItem.totalCost" locale="pt-BR" :minFractionDigits="2" style="width: 5rem"
-                        class="input-number-editor" />
-            </div>
-
-            <div class="flex justify-content-end gap-2">
-                  <Button type="button" label="Cancelar" severity="secondary" @click="manutModalVisible = false" />
-                  <Button type="button" label="Salvar" severity="primary" @click="saveData('manutencao')" />
-            </div>
-
-      </Dialog> -->
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import Toast from 'primevue/toast';
-import { useToast } from 'primevue/usetoast';
+import { ref, onMounted, onUnmounted } from 'vue';
 import Toolbar from 'primevue/toolbar';
 import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
@@ -166,97 +81,51 @@ import Button from "primevue/button";
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Calendar from 'primevue/calendar';
-import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Dropdown from 'primevue/dropdown';
-import Divider from 'primevue/divider';
-import TieredMenu from 'primevue/tieredmenu';
 
 import { v4 as uuidv4 } from 'uuid';
 import { convert } from '../scripts/convert';
 
-const props = defineProps(['type', 'combHasVTRFilter', 'combHasDateFilter','manHasVTRFilter', 'manHasDateFilter',  'combDataTable', 'manDataTable', 'vtr_list'])
-const emit = defineEmits(['importResExcel', 'manutencaoExportState'])
+const props = defineProps(['type', 'combDataTable', 'manDataTable', 'vtr_list'])
+const emit = defineEmits(['closeModal'])
+const model = defineModel()
 
 const ipcRenderer = window.electron.ipcRenderer
 
-const toast = useToast();
-
-const combModalVisible = ref(false)
+const combModalVisibleCopy = model
 const combModalItems = ref([])
 const combEditingRows = ref([])
-
-const manutModalVisible = ref(false)
-const manutModalItems = ref([])
-const manutEditingRows = ref([])
 
 const textPathAndSendConvert = (path) => {
       let fullpath = document.getElementById(path).files[0].path;
       console.log(fullpath)
       ipcRenderer.send('sendData:converter-pdf', fullpath)
 }
-ipcRenderer.on('retrieveData:converter-pdf', (res, dataRes) => {
-      //console.log(dataRes);
-      dataRes.forEach(data => {
-            combModalItems.value.push(data.doc)
-      });
-      convert.sortDate(combModalItems.value)
-      combModalItems.value.forEach(doc => {
-            doc.tag = 'combustivel'
-            doc.date = convert.convertDateToFormatString(doc.date)
+
+onMounted(() => {
+      ipcRenderer.on('retrieveData:converter-pdf', (res, dataRes) => {
+            //console.log(dataRes);
+            dataRes.forEach(data => {
+                  combModalItems.value.push(data.doc)
+            });
+            convert.sortDate(combModalItems.value)
+            combModalItems.value.forEach(doc => {
+                  doc.tag = 'combustivel'
+                  doc.date = convert.convertDateToFormatString(doc.date)
+            })
+            //console.log(combModalItems.value)
       })
-      //console.log(combModalItems.value)
 })
 
-const manutencaoExportState = ref([])
-const textPathAndImportExcel = (path) => {
-      let fullpath = document.getElementById(path).files
-      if (fullpath.length > 0) {
-            fullpath = fullpath[0].path;
-            ipcRenderer.send('import:Excel', fullpath, 'load')
-            return
-      }
-      ipcRenderer.send('import:Excel', null)
-      excelPages.value = [{label: 'Vazio'}]
-}
-const confirmImport = (selectedWorksheet, path) => {
-      if (selectedWorksheet == 'Vazio') return
-      console.log(selectedWorksheet);
-      let fullpath = document.getElementById(path).files[0].path;
-      if (selectedWorksheet == 'Tudo') {
-            emit('manutencaoExportState', null)
-            ipcRenderer.send('import:Excel', fullpath, 'all')
-            return
-      }
-      emit('manutencaoExportState', selectedWorksheet)
-      ipcRenderer.send('import:Excel', fullpath, 'import', selectedWorksheet)
-}
-/* const importAll = (path) => {
-      selectedPage.value = 'Vazio'
-      emit('manutencaoExportState', null)
-      let fullpath = document.getElementById(path).files[0].path;
-      ipcRenderer.send('import:Excel', fullpath, 'all')
-} */
-ipcRenderer.on('importRes:Excel', (res, data, type) => {
-      if (type == 'load') {
-            excelPages.value = data
-            excelPages.value.unshift({label: 'Tudo'})
-            return
-      }
-      console.log(data);
-      manutencaoExportState.value = data
-      emit('importResExcel', data)
+onUnmounted(() => {
+      ipcRenderer.removeAllListeners('retrieveData:converter-pdf')
 })
 
 const onRowEditSave = (event, typeC) => {
       let { newData, index } = event;
-      if (typeC) {
-            combModalItems.value[index] = newData;
-            console.log(combModalItems.value[index]);
-            return
-      }
-      manutModalItems.value[index] = newData;
-      console.log(manutModalItems.value[index]);
+      combModalItems.value[index] = newData;
+      console.log(combModalItems.value[index]);
 }
 
 const saveData = (type) => {
@@ -281,15 +150,8 @@ const saveData = (type) => {
 }
 
 const removeRow = (id, type) => {
-      if (type == 'combustivel') {
-            combModalItems.value = combModalItems.value.filter(val => val._id !== id);
-            combEditingRows.value = combEditingRows.value.filter(val => val._id !== id)
-            return
-      }
-      else if (type == 'manutencao') {
-            manutModalItems.value = manutModalItems.value.filter(val => val._id !== id);
-            manutEditingRows.value = manutEditingRows.value.filter(val => val._id !== id)
-      }
+      combModalItems.value = combModalItems.value.filter(val => val._id !== id);
+      combEditingRows.value = combEditingRows.value.filter(val => val._id !== id)
 }
 
 const addNewItem = (type) => {
@@ -306,150 +168,11 @@ const addNewItem = (type) => {
       return
 }
 
-const manNewItem = ref({})
-const openNewManutItem = () => {
-      manNewItem.value = {
-            _id: uuidv4(),
-            date: convert.convertDateToFormatString(new Date()),
-            vtr: '',
-            items: [
-                  {
-                        item: '',
-                        price: 0,
-                  },
-            ],
-            totalCost: 0,
-            tag: 'manutencao',
-      }
-      console.log(manNewItem.value);
-}
-
-const newEditItem = (evet, items) => {
-      items.push({
-            item: '',
-            price: 0
-      })
-}
-
-const removeEditItem = (event, item, items) => {
-      let index = items.findIndex((obj) => {
-            return obj == item
-      })
-      items.splice(index, 1)
-      getEditTotal(event, items)
-}
-
-const getEditTotal = (event, items) => {
-      manNewItem.value.totalCost = 0
-      items.forEach(item => {
-            manNewItem.value.totalCost += item.price
-      })
-}
 
 const clearForm = (typeC) => {
-      if (typeC) {
-            combModalItems.value = []
-            combEditingRows.value = []
-            return
-      }
-      manutModalItems.value = []
-      manutEditingRows.value = []
+      combModalItems.value = []
+      combEditingRows.value = []
 }
-
-/* const vtr_list = ref([
-      { label: 'VTR 25' },
-      { label: 'VTR 26' },
-      { label: 'VTR 27' },
-      { label: 'VTR 28' },
-      { label: 'VTR 29' },
-      { label: 'VTR 30' },
-      { label: 'VTR 31' },
-      { label: 'VTR 32' },
-      { label: 'VTR 33' },
-      { label: 'VTR 34' },
-      { label: 'VTR 35' },
-      { label: 'VTR 36' },
-      { label: 'VTR 37' },
-      { label: 'VTR 38' },
-      { label: 'VTR 39' },
-      { label: 'VTR 40' },
-      { label: 'VTR 41' }
-]) */
-const menu = ref()
-const toggle = (event) => menu.value.toggle(event);
-const items = [
-      {
-            label: 'PDF',
-            icon: 'pi pi-file-pdf',
-            comand: (event, type) => {
-                  console.log(type + ' pdf')
-                  if (type == 'combustivel') {
-                        if (props.combDataTable.processedData.length == 0) {
-                              toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
-                              return
-                        }
-                        else if (!props.combHasDateFilter.state && !props.combHasVTRFilter.state) {
-                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para exportar!', life: 3000 })
-                              return
-                        }
-                        ipcRenderer.send('export:PDF', type, JSON.stringify(props.combHasDateFilter), JSON.stringify(props.combHasVTRFilter), JSON.stringify(props.combDataTable.processedData))
-                        return
-                  }
-
-                  if (props.manDataTable.processedData.length == 0) {
-                        toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
-                        return
-                  }
-                  else if (!props.manHasDateFilter && !props.manHasVTRFilter.state) {
-                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma VTR para exportar!', life: 3000 })
-                        return
-                  }
-                  ipcRenderer.send('export:PDF', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))
-            },
-      },
-      /* {
-            label: 'Excel',
-            icon: 'pi pi-file-excel',
-            comand: (event, type) => {
-                  console.log(type + ' excel')
-                  if (type == 'combustivel') {
-                        if (props.combDataTable.processedData.length == 0) {
-                              toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
-                              return
-                        }
-                        if (props.combHasDateFilter.state == false) {
-                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para exportar!', life: 3000 })
-                              return
-                        }
-                        else if (props.combHasVTRFilter.state == true) {
-                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Remova o filtro de VTR!', life: 3000 })
-                              return
-                        }
-                        ipcRenderer.send('export:Excel', type, JSON.stringify(props.combHasDateFilter), JSON.stringify(props.combHasVTRFilter), JSON.stringify(props.combDataTable.processedData))
-                        return
-                  }
-
-                  if (props.manDataTable.processedData.length == 0) {
-                        toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
-                        return
-                  }
-                  if (props.manHasDateFilter.state == false) {
-                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data para exportar!', life: 3000 })
-                        return
-                  }
-                  else if (props.manHasVTRFilter.state == true) {
-                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Remova o filtro de VTR!', life: 3000 })
-                        return
-                  }
-                  ipcRenderer.send('export:Excel', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))
-            },
-      } */
-]
-
-const selectedPage = ref()
-const excelPages = ref([
-      {label: 'Vazio'}
-])
 </script>
 
 <style scoped>

@@ -8,6 +8,7 @@ import PrimeVueStyled from 'primevue/styled'
 import PrimeOne from 'primevue/themes/primeone';
 import Aura from 'primevue/themes/primeone/aura';
 import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
 import ptBr from './assets/pt-br.json';
 
 
@@ -18,10 +19,11 @@ app.use(PrimeVue, {
             base: PrimeOne,
             preset: Aura,
             options: {
-                darkModeSelector: 'system',
+                  darkModeSelector: 'system',
             }
       }
 })
 app.use(ToastService);
+app.use(ConfirmationService)
 app.mount('#app')
 

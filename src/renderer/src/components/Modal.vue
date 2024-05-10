@@ -1,7 +1,7 @@
 <template>
       <Dialog v-model:visible="combModalVisibleCopy" modal header="Escolha o PDF"
             :style="{ width: '95vw', height: '90rem', }" v-if="props.type === 'combustivel'" :position="'top'"
-            @after-hide="clearForm('combustivel')" @show="console.log(props.type)">
+            @after-hide="clearForm('combustivel')" @show="console.log(props.type)" id="combDialog">
 
             <Toolbar>
                   <template #start>
@@ -35,13 +35,15 @@
 
                   <Column field="lt" header="Lt" style="width: 15%">
                         <template #editor="{ data, field }">
-                              <InputNumber v-model="data[field]" style="width: 5rem" class="input-number-editor" />
+                              <InputNumber v-model="data[field]" :minFractionDigits="3" :maxFractionDigits="3"
+                               style="width: 5rem" class="input-number-editor" placeholder="0" />
                         </template>
                   </Column>
 
                   <Column field="odometer" header="Odômetro" style="width: 15%">
                         <template #editor="{ data, field }">
-                              <InputNumber v-model="data[field]" style="width: 5rem" class="input-number-editor" />
+                              <InputNumber v-model="data[field]" :useGrouping="false"
+                               style="width: 5rem" class="input-number-editor" placeholder="0" />
                         </template>
                   </Column>
 
@@ -130,19 +132,9 @@ const onRowEditSave = (event, typeC) => {
 
 const saveData = (type) => {
       let data;
-      if (type == 'combustivel') {
-            data = JSON.stringify(combModalItems.value)
-            ipcRenderer.send('requestSave', data, 'save')
-            ipcRenderer.send('requestData:Combustivel')
-      }
-      else if (type == 'manutencao') {
-            data = []
-            data[0] = ({ ...manNewItem.value })
-            console.log(data);
-            ipcRenderer.send('requestSave', JSON.stringify(data), 'save')
-            ipcRenderer.send('requestData:Manutencao')
-      }
-      //console.log(combModalItems.value);
+      data = JSON.stringify(combModalItems.value)
+      ipcRenderer.send('requestSave', data, 'save')
+      ipcRenderer.send('requestData:Combustivel')
       combModalItems.value = []
       combEditingRows.value = []
 
@@ -158,10 +150,10 @@ const addNewItem = (type) => {
       const obj = {
             _id: uuidv4(),
             date: convert.convertDateToFormatString(new Date()),
-            vtr: '',
+            vtr: 'VTR 00',
             driver: '',
-            lt: 0,
-            odometer: 0,
+            lt: null,
+            odometer: null,
             cost: 0,
       }
       combModalItems.value.push(obj)
@@ -254,5 +246,26 @@ const clearForm = (typeC) => {
 <style>
 .p-dialog>.p-dialog-content {
       overflow-y: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+      #combDialog .p-inputtext:enabled:focus {
+            border-color: #fff;
+      }
+      #combDialog .p-dropdown:not(.p-disabled).p-focus {
+            border-color: #fff;
+      }
+      .p-dropdown-filter-container>.p-inputtext:enabled:focus {
+            border-color: #fff;
+      }
+}
+@media (prefers-color-scheme: light) {
+      #combDialog .p-inputtext:enabled:focus {
+            border-color: #000;
+      }
+      #combDialog .p-dropdown:not(.p-disabled).p-focus {
+            border-color: #000;
+      }
+
 }
 </style>

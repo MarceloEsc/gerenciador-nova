@@ -94,7 +94,6 @@ async function handlePDFData(dadosC) {
             if (dado.produto === undefined) dado.produto = null;
 
             if (dado.lt !== undefined) {
-                  dado.lt = dado.lt.slice(0, -1)
                   dado.lt = parseFloat(dado.lt.replace(/,/g, '.'))
             }
             else if (dado.lt === undefined) dado.lt = null;

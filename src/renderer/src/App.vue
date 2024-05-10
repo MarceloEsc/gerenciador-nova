@@ -44,13 +44,15 @@
 
       <Column field="lt" header="Lt" style="width: 15%">
         <template #editor="{ data, field }">
-          <InputNumber v-model="data[field]" locale="pt-BR" style="width: 5rem" class="input-number-editor" />
+          <InputNumber v-model="data[field]" :minFractionDigits="3" :maxFractionDigits="3"
+          style="width: 6.5rem" class="input-number-editor" />
         </template>
       </Column>
 
       <Column field="odometer" header="Odômetro" style="width: 15%">
         <template #editor="{ data, field }">
-          <InputNumber v-model="data[field]" locale="pt-BR" style="width: 5rem" class="input-number-editor" />
+          <InputNumber v-model="data[field]" :useGrouping="false"
+          locale="pt-BR" style="width: 6rem" class="input-number-editor" />
         </template>
       </Column>
 
@@ -59,7 +61,7 @@
           {{ convert.formatCurrency(data[field]) }}
         </template>
         <template #editor="{ data, field }">
-          <InputNumber v-model="data[field]" mode="currency" currency="BRL" />
+          <InputNumber v-model="data[field]" mode="currency" currency="BRL" style="width: 6rem" />
         </template>
       </Column>
 
@@ -74,12 +76,11 @@
       </Column>
 
     </DataTable>
+    <ConfirmDialog />
   </div>
   <div id="pageTwo" class="is-hidden">
     <CustomToolbar type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
       :manHasDateFilter="manHasDateFilter" :vtr_list="vtr_list" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
-    <!-- <CustomModal type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
-      :manHasDateFilter="manHasDateFilter" :vtr_list="vtr_list" @importResExcel="importResExcel" @manutencaoExportState="setManState" /> -->
 
     <DataTable ref="manDataTable" :value="manItems" dataKey="_id"  @update:filters="handleFilters($event, 'manutencao')"
       v-model:filters="filtersMan" filterDisplay="row">      
@@ -123,8 +124,8 @@ import Column from 'primevue/column';
 import Calendar from 'primevue/calendar';
 import InputNumber from 'primevue/inputnumber';
 import Dropdown from 'primevue/dropdown';
-// import Dialog from 'primevue/dialog';
-// import Divider from 'primevue/divider';
+import ConfirmDialog from 'primevue/confirmdialog';
+import { useConfirm } from "primevue/useconfirm";
 
 //CUSTOM COMPONENTS
 import Tabs from './components/Tabs.vue';
@@ -133,10 +134,10 @@ import CustomToolbar from './components/Toolbar.vue'
 import Config from './components/Config.vue';
 
 //SCRIPTS
-import { v4 as uuidv4 } from 'uuid';
 import { convert } from './scripts/convert';
 
 const ipcRenderer = window.electron.ipcRenderer
+const confirm = useConfirm()
 
 const combItems = ref([
   /* {
@@ -375,12 +376,26 @@ const onRowEditSave = (event, type, manEditItemData) => {
 }
 
 const removeRow = (event, obj, type) => {
-  console.log(obj)
-  /* console.log(combItems.value.indexOf(obj)); */
-  combItems.value = combItems.value.filter(val => val._id !== obj._id);
-  console.log(combItems.value);
-  obj = JSON.stringify(obj)
-  ipcRenderer.send('requestRemove', obj)
+  confirm.require({
+    message: 'Deseja apagar essa transação?',
+    header: 'Confirme',
+    position: 'right',
+    rejectProps: {
+      label: 'cancelar',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'excluir',
+      severity: 'danger',
+    },
+    accept: () => {
+      combItems.value = combItems.value.filter(val => val._id !== obj._id);
+      console.log(combItems.value);
+      obj = JSON.stringify(obj)
+      ipcRenderer.send('requestRemove', obj)
+    }
+  })
 }
 ///////////////////////////////////////////////////////////
 
@@ -388,7 +403,7 @@ const removeRow = (event, obj, type) => {
 
 <style scoped>
 .p-toolbar {
-  border: 0
+  border: 0;
 }
 
 .p-inputtext {
@@ -473,7 +488,7 @@ table .p-datatable-thead>tr>th {
 
 @media (prefers-color-scheme: dark) {
   table>.p-datatable-tbody>tr.p-highlight {
-    background: #191d27;
+    background: #1e1e23;
   }
 
   table>.p-datatable-tbody>tr.p-highlight>td {
@@ -494,11 +509,43 @@ table .p-datatable-thead>tr>th {
     border: 1px solid #1b2e66;
   }
 
+  #app .p-tabmenuitem.p-highlight .p-menuitem-link {
+    color: #fff;
+  }
+  #app .p-tabmenu-ink-bar {
+    background-color: #fff;
+  }
+
+  #app .p-inputtext:enabled:focus {
+    border-color: #fff;
+  }
+  #app .p-dropdown:not(.p-disabled).p-focus {
+    border-color: #fff;
+  }
+
+  #app .p-column-filter-menu-button.p-column-filter-menu-button-active, .p-column-filter-menu-button.p-column-filter-menu-button-active:hover {
+    color: #000;
+    background: #ffffffb8;
+  }
+
+  #app .p-datatable-tbody > tr:has(+ .p-highlight) > td {
+    border-bottom-color: #fff;
+  }
+
+  .p-dropdown-items-wrapper ul .p-highlight {
+    background: #ddd;
+    color: #000;
+  }
+  .p-dropdown-items-wrapper ul .p-highlight.p-focus {
+    background: #ddd;
+    color: #000;
+  }
+
 }
 
 @media (prefers-color-scheme: light) {
   table>.p-datatable-tbody>tr.p-highlight {
-    background: #c8d8ff;
+    background: #ccc;
   }
 
   table>.p-datatable-tbody>tr.p-highlight>td {
@@ -517,6 +564,42 @@ table .p-datatable-thead>tr>th {
     color: #334155;
     background: #cccccc;
     border: 1px solid #cccccc;
+  }
+
+  #app .p-tabmenuitem.p-highlight .p-menuitem-link {
+    color: #000;
+  }
+  #app .p-tabmenu-ink-bar {
+    background-color: #000;
+  }
+
+  #app .p-inputtext:enabled:focus {
+    border-color: #000;
+  }
+  #app .p-dropdown:not(.p-disabled).p-focus {
+    border-color: #000;
+  }
+
+  #app .p-column-filter-menu-button.p-column-filter-menu-button-active, .p-column-filter-menu-button.p-column-filter-menu-button-active:hover {
+    color: #fff;
+    background: #000000b8;
+  }
+
+  #app .p-datatable-tbody > tr.p-highlight .p-row-editor-save:hover, #app .p-datatable-tbody > tr.p-highlight .p-row-editor-cancel:hover {
+    color: #000;
+  }
+
+  #app .p-datatable-tbody > tr:has(+ .p-highlight) > td {
+    border-bottom-color: #000;
+  }
+
+  .p-dropdown-items-wrapper ul .p-highlight {
+    background: #333;
+    color: #fff;
+  }
+  .p-dropdown-items-wrapper ul .p-highlight.p-focus {
+    background: #333;
+    color: #fff;
   }
 }
 </style>

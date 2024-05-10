@@ -65,6 +65,7 @@ onMounted(() => {
 
 const manutencaoExportState = ref([])
 const textPathAndImportExcel = (path) => {
+      selectedPage.value = null
       let fullpath = document.getElementById(path).files
       if (fullpath.length > 0) {
             fullpath = fullpath[0].path;
@@ -180,7 +181,12 @@ const excelPages = ref([
 }
 
 .p-toolbar {
-      border: 0
+      border: 0;
+      position: sticky;
+      top: 0px;
+      z-index: 1;
+      border-bottom: 1px solid var(--p-toolbar-border-color);
+      border-radius: 0;
 }
 
 .p-inputtext {

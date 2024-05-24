@@ -1,7 +1,7 @@
 <template>
       <Dialog v-model:visible="combModalVisibleCopy" modal header="Escolha o PDF"
             :style="{ width: '95vw', height: '90rem', }" v-if="props.type === 'combustivel'" :position="'top'"
-            @after-hide="clearForm('combustivel')" @show="console.log(props.type)" id="combDialog">
+            @after-hide="clearForm('combustivel')" @show="console.log(props.type)" id="combDialog"  :dismissableMask="true">
 
             <Toolbar>
                   <template #start>

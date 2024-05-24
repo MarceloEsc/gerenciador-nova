@@ -91,7 +91,7 @@ import { convert } from '../scripts/convert';
 
 const props = defineProps(['type', 'combDataTable', 'manDataTable', 'vtr_list'])
 const emit = defineEmits(['closeModal'])
-const model = defineModel()
+const model = defineModel('modalVisible')
 
 const ipcRenderer = window.electron.ipcRenderer
 

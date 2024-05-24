@@ -9,7 +9,7 @@
       <CustomToolbar type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
         :combHasDateFilter="combHasDateFilter" :vtr_list="vtr_list" @openModal="handleModalVisibility" />
       <CustomModal type="combustivel" :combDataTable="combDataTable" :vtr_list="vtr_list"
-      v-model="combModalVisible" @closeModal="handleModalVisibility" v-if="combModalVisible" />
+      v-model:modalVisible="combModalVisible" @closeModal="handleModalVisibility" v-if="combModalVisible" />
 
     <!-- <Button label="Log displayed items" icon="pi pi-exclamation-circle" severity="danger" style="width: 15rem"
       @click="logCurrentTableItems" /> -->

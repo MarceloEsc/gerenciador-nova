@@ -8,8 +8,8 @@
 import { ref, onMounted } from "vue";
 import TabMenu from 'primevue/tabmenu';
 
-const activeIndex = ref()
 onMounted(() => {
+  const activeIndex = ref(0)
   activeIndex.value = 0
 })
 
@@ -19,18 +19,12 @@ const items = ref([
   {
     label: 'Combustível',
     icon: 'pi pi-home',
-    command: () => {
-      //console.log(event);
-      emit('tab', 'comb')
-    }
+    command: () => emit('tab', 'comb')
   },
   {
     label: 'Manutenção',
     icon: 'pi pi-chart-line',
-    command: () => {
-      //console.log(event);
-      emit('tab', 'manut')
-    }
+    command: () => emit('tab', 'manut')
   },
 ]);
 </script>

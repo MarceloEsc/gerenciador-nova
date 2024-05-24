@@ -219,17 +219,14 @@ const importResExcel = (data) => {
 
 const activeTab = ref('comb')
 const changeTab = (tab) => {
-  //activeTab.value = tab
-  let pageOne = document.getElementById('pageOne')
-  let pageTwo = document.getElementById('pageTwo')
+  let pageOne = document.getElementById('pageOne').classList
+  let pageTwo = document.getElementById('pageTwo').classList
 
-  if (tab == 'comb') {
-    pageOne.classList.toggle('is-hidden')
-    pageTwo.classList.toggle('is-hidden')
-    return
+  if (tab != activeTab.value) {
+    pageOne.toggle('is-hidden')
+    pageTwo.toggle('is-hidden')
+    activeTab.value = tab
   }
-  pageTwo.classList.toggle('is-hidden')
-  pageOne.classList.toggle('is-hidden')
 }
 const logCurrentTableItems = () => {
   console.log(combDataTable.value.processedData);

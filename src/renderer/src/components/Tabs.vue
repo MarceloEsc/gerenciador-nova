@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <TabMenu :model="items" :activeIndex="activeIndex" />
+    <TabMenu :model="items" :activeIndex="index" />
   </div>
 </template>
 
@@ -8,9 +8,9 @@
 import { ref, onMounted } from "vue";
 import TabMenu from 'primevue/tabmenu';
 
+const index = ref()
 onMounted(() => {
-  const activeIndex = ref(0)
-  activeIndex.value = 0
+  index.value = 0
 })
 
 const emit = defineEmits(['tab'])

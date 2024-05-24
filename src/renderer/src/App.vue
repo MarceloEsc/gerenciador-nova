@@ -1,6 +1,6 @@
 <template>
   <Tabs @tab="changeTab" />
-  <Config id="configMenu" v-if="toggleConfigMenu" @closeMenu="toggleMenu" :vtr_list="vtr_list" @removeVTR="removeVTR" @saveVTR="saveVTR" />
+  <Config id="configMenu" v-if="toggleConfigMenu" @closeMenu="toggleMenu" v-model:vtr_list="vtr_list" @removeVTR="removeVTR" @saveVTR="saveVTR" />
 
   <Button icon="pi" id="themeBtn" @click="toggleColorScheme" severity="contrast" rounded="true" outlined="true" />
   <Button icon="pi pi-cog" id="configBtn" @click="toggleMenu" severity="contrast" rounded="true" outlined="true" />

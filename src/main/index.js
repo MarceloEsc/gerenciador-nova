@@ -8,7 +8,6 @@ const windowStateKeeper = require('electron-window-state')
 
 const { PdfReader } = require('pdfreader')
 const { writeFileSync, readFileSync } = require('fs')
-import { importDB, exportDB } from './backend.js'
 import { montarPDF } from './exportPdf.js'
 import { getMetaData, importExcel, importExcelAll } from './importExcel.js'
 import { faturaLog } from './pdf-reader.js'

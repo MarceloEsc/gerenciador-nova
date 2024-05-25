@@ -1,26 +1,27 @@
 <template>
   <Tabs @tab="changeTab" />
-  <Config id="configMenu" v-if="toggleConfigMenu" @closeMenu="toggleMenu" v-model:vtr_list="vtr_list" @removeVTR="removeVTR" @saveVTR="saveVTR" />
+  <Config id="configMenu" v-if="toggleConfigMenu" @closeMenu="toggleMenu" v-model:vtrList="vtrList" @removeVTR="removeVTR"
+  @saveVTR="saveVTR" @migrarVtr="migrarVtr" @populateVTR="populateVTR" @requestCombustivelData="requestCombustivelData" />
 
   <Button icon="pi" id="themeBtn" @click="toggleColorScheme" severity="contrast" rounded="true" outlined="true" />
   <Button icon="pi pi-cog" id="configBtn" @click="toggleMenu" severity="contrast" rounded="true" outlined="true" />
 
   <div id="pageOne">
       <CustomToolbar type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
-        :combHasDateFilter="combHasDateFilter" :vtr_list="vtr_list" @openModal="handleModalVisibility" />
-      <CustomModal type="combustivel" :combDataTable="combDataTable" :vtr_list="vtr_list"
-      v-model:modalVisible="combModalVisible" @closeModal="handleModalVisibility" v-if="combModalVisible" />
+        :combHasDateFilter="combHasDateFilter" :vtrList="vtrList" @openModal="handleModalVisibility" />
+      <CustomModal type="combustivel" :combDataTable="combDataTable" :vtrList="vtrList"
+      v-model:modalVisible="combModalVisible" @closeModal="handleModalVisibility" v-if="combModalVisible"
+      @requestCombustivelData="requestCombustivelData" />
 
     <!-- <Button label="Log displayed items" icon="pi pi-exclamation-circle" severity="danger" style="width: 15rem"
       @click="logCurrentTableItems" /> -->
 
-    <!-- PAGINATOR BUG paginator :rows="20" :rowsPerPageOptions="[20, 30, 40, 50]" -->
-    <DataTable ref="combDataTable" :value="combItems" dataKey="_id" v-model:editingRows="combEditingRows" editMode="row"
+    <DataTable ref="combDataTable" :value="combItems" dataKey="id" v-model:editingRows="combEditingRows" editMode="row"
       v-model:selection="combEditingRows" @row-edit-save="onRowEditSave($event, 'combustivel')"
       @row-edit-cancel="console.log($event)" @update:filters="handleFilters($event, 'combustivel')"
       v-model:filters="filters" filterDisplay="row">
 
-      <Column field="date" header="Data" style="width: 20%">
+      <Column field="timestamp" header="Data" style="width: 20%">
         <template #editor="{ data, field }">
           <Calendar v-model="data[field]" dateFormat="dd/mm/yy" mask="99/99/9999"
             @update:modelValue="data[field] = convert.convertDateToFormatString($event)" />
@@ -33,12 +34,12 @@
 
       <Column field="vtr" header="VTR" style="width: 15%">
         <template #editor="{ data, field }">
-          <Dropdown v-model="data[field]" :options="vtr_list" optionLabel="label" optionValue="label"
+          <Dropdown v-model="data[field]" :options="vtrList" optionLabel="vtr" optionValue="vtr"
             :placeholder="data[field]" />
         </template>
         <template #filter="{ filterModel, filterCallback }">
-          <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtr_list" optionLabel="label"
-            optionValue="label" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
+          <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtrList" optionLabel="vtr"
+            optionValue="vtr" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
         </template>
       </Column>
 
@@ -56,7 +57,7 @@
         </template>
       </Column>
 
-      <Column field="cost" header="Valor" style="width: 15%">
+      <Column field="price" header="Valor" style="width: 15%">
         <template #body="{ data, field }">
           {{ convert.formatCurrency(data[field]) }}
         </template>
@@ -80,15 +81,15 @@
   </div>
   <div id="pageTwo" class="is-hidden">
     <CustomToolbar type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
-      :manHasDateFilter="manHasDateFilter" :vtr_list="vtr_list" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
+      :manHasDateFilter="manHasDateFilter" :vtrList="vtrList" @importResExcel="importResExcel" @manutencaoExportState="setManState" />
 
     <DataTable ref="manDataTable" :value="manItems" dataKey="_id"  @update:filters="handleFilters($event, 'manutencao')"
       v-model:filters="filtersMan" filterDisplay="row">      
 
       <Column field="vtr" header="VTR" style="width: 15%">
         <template #filter="{ filterModel, filterCallback }">
-          <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtr_list" optionLabel="label"
-            optionValue="label" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
+          <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtrList" optionLabel="vtr"
+            optionValue="vtr" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
         </template>
       </Column>
 
@@ -151,6 +152,7 @@ const combItems = ref([
   } */
 ])
 const combDataTable = ref();
+const combEditingRows = ref([]);
 
 const manItems = ref([
   /* {
@@ -191,20 +193,20 @@ const manItems = ref([
 const manDataTable = ref();
 
 onMounted(() => {
-  ipcRenderer.send('requestData:Combustivel')
-  ipcRenderer.on('requestData:res', (event, res, type) => {
-    if (type == 'combustivel') {
-      combItems.value = []
-      console.log(res);
-      convert.sortDate(res)
-      res.forEach(data => {
-        data.date = convert.convertDateToFormatString(data.date)
-        combItems.value.push(data)
-      });
-    }
-  })
+  requestCombustivelData()
 })
 
+const requestCombustivelData = () => {
+  ipcRenderer.invoke('requestData:Combustivel').then(res => {
+      combItems.value = []
+      convert.sortDate(res)
+      res.forEach(data => {
+        data.timestamp = convert.convertDateToFormatString(data.timestamp)
+        combItems.value.push(data)
+      });
+      console.log(combItems.value);
+  })
+}
 
 const importResExcel = (data) => {
   //console.log(data);
@@ -246,18 +248,15 @@ const toggleColorScheme = (event) => {
 const toggleConfigMenu = ref(false)
 const toggleMenu = (event) => {
   toggleConfigMenu.value = !toggleConfigMenu.value
-  /* document.getElementById('configMenu').classList.toggle('is-hidden') */
 }
 
 onMounted(() => {
-  ipcRenderer.send('init:GetTheme');
-  ipcRenderer.on('init:RecieveTheme', (event, theme) => {
+  ipcRenderer.invoke('init:GetTheme').then(theme => {
     let icon;
     let element = document.getElementById('themeBtn').firstElementChild.classList
     if (theme == 'light') icon = 'pi-sun'
     else { icon = 'pi-moon' }
     element.add(icon)
-    /* console.log(icon);console.log(element); */
   });
 })
 
@@ -266,59 +265,78 @@ const handleModalVisibility = (value) => {
   combModalVisible.value = value
 }
 ///////////////////////////////////////////////////////////
+const vtrList = ref([])
 
-const combEditingRows = ref([]);
-
-const vtr_list = ref([
-  { label: 'VTR 25', placa: 'SWX7J40' },
-  { label: 'VTR 26', placa: 'FUS8A67' },
-  { label: 'VTR 27', placa: 'GIQ8F05' },
-  { label: 'VTR 28', placa: 'GED7C04' },
-  { label: 'VTR 29', placa: 'EZU2242' },
-  { label: 'VTR 30', placa: 'GDN5B92' },
-  { label: 'VTR 31', placa: 'DMC2E19' },
-  { label: 'VTR 32', placa: 'FJN3A42' },
-  { label: 'VTR 33', placa: 'FTL9G53' },
-  { label: 'VTR 34', placa: 'GBK4J07' },
-  { label: 'VTR 35', placa: 'FRR6H75' },
-  { label: 'VTR 36', placa: 'GHX0C34' },
-  { label: 'VTR 37', placa: 'FGJ2H91' },
-  { label: 'VTR 38', placa: 'FVV5I21' },
-  { label: 'VTR 39', placa: 'GBJ9J34' },
-  { label: 'VTR 40', placa: 'CUM4C25' },
-  { label: 'VTR 41', placa: 'GIF2G21' }
-])
-
-onMounted(() => {
-  ipcRenderer.send('getVTRList', JSON.stringify(vtr_list.value))
-  ipcRenderer.on('recVTRList', (event, list) => {
-    console.log(list);
-    if (list.length > 0) vtr_list.value = list  
+const populateVTR = () => {
+  ipcRenderer.invoke('populateVTR').then(res => {
+    vtrList.value = res
+    console.log(vtrList.value);
+    vtrList.value = vtrList.value.sort((a, b) => a.vtr.localeCompare(b.vtr))
   })
-})
+}
+populateVTR()
 
 const removeVTR = (data) => {
-  vtr_list.value = vtr_list.value.filter(val => val._id !== data._id);
-  ipcRenderer.send('requestRemove', JSON.stringify(data))
+  vtrList.value = vtrList.value.filter(val => val.id !== data.id);
+  console.log(data);
+  ipcRenderer.send('deleteEntry', 'VTR', JSON.stringify([data]))
 }
 
 const saveVTR = (oldData, newdata) => {
-  vtr_list.value = vtr_list.value.filter(val => val._id !== newdata._id);
-  vtr_list.value.unshift(newdata)
-  vtr_list.value = vtr_list.value.sort((a, b) => { return a.label.localeCompare(b.label) })
-  ipcRenderer.send('saveVTR', JSON.stringify(newdata))
-  ipcRenderer.send('changeBulkVTR', JSON.stringify(oldData), JSON.stringify(newdata))
+  vtrList.value = vtrList.value.filter(val => val.id !== newdata.id);
+  vtrList.value.push(newdata)
+  vtrList.value = vtrList.value.sort((a, b) => a.vtr.localeCompare(b.vtr))
+
+  ipcRenderer.send('updateVTR', JSON.stringify(oldData), JSON.stringify(newdata))
+  ipcRenderer.send('updateFaturas', JSON.stringify(oldData), JSON.stringify(newdata))
+  populateVTR()
+}
+
+const migrarVtr = (oldData, newdata) => {
+  ipcRenderer.send('updateFaturas', JSON.stringify(oldData), JSON.stringify(newdata), 'migrar')
+  populateVTR()
+}
+
+const onRowEditSave = (event) => {
+  let { newData, index } = event;
+  let oldData = combItems.value[index]
+  combItems.value[index] = { ...newData };
+  newData.timestamp = convert.convertDateToMilliseconds(newData.timestamp)
+  ipcRenderer.send('updateFaturas', JSON.stringify(oldData), JSON.stringify(newData))
+}
+
+const removeRow = (event, obj) => {
+  confirm.require({
+    message: 'Deseja apagar essa transação?',
+    header: 'Confirme',
+    position: 'right',
+    rejectProps: {
+      label: 'cancelar',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'excluir',
+      severity: 'danger',
+    },
+    accept: () => {
+      combItems.value = combItems.value.filter(item => item.id !== obj.id);
+      console.log(combItems.value);
+      obj = JSON.stringify([obj])
+      ipcRenderer.send('deleteEntry', 'Faturas', obj)
+    }
+  })
 }
 
 const filters = ref({
-  date: { value: convert.convertDateToFormatString(new Date).slice(3), matchMode: FilterMatchMode.CONTAINS },
+  timestamp: { value: convert.convertDateToFormatString(new Date).slice(3), matchMode: FilterMatchMode.CONTAINS },
   vtr: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 const filtersMan = ref({
   vtr: { value: null, matchMode: FilterMatchMode.EQUALS },
 });
 
-const combHasDateFilter = ref({ date: null, state: false })
+const combHasDateFilter = ref({ timestamp: null, state: false })
 const combHasVTRFilter = ref({ vtr: null, state: false })
 const manHasDateFilter = ref()
 const manHasVTRFilter = ref({ vtr: null, state: false })
@@ -328,13 +346,13 @@ const setManState = (date, vtr) => {
 const handleFilters = (event, type) => {
   console.log(event);
   if (type === 'combustivel') {
-    if (event.date.value) {
+    if (event.timestamp.value) {
       combHasDateFilter.value.state = true
-      combHasDateFilter.value.date = convert.formatMonthString(event.date.value)
+      combHasDateFilter.value.timestamp = convert.formatMonthString(event.timestamp.value)
     }
     else {
       combHasDateFilter.value.state = false
-      combHasDateFilter.value.date = null
+      combHasDateFilter.value.timestamp = null
     }
     if (event.vtr.value) {
       combHasVTRFilter.value.state = true
@@ -359,40 +377,6 @@ const handleFilters = (event, type) => {
   }
   console.log(manHasDateFilter.value);
   console.log(manHasVTRFilter.value);
-}
-
-const onRowEditSave = (event, type, manEditItemData) => {
-  //console.log(event)
-  let { newData, index } = event;
-  let data;
-
-  combItems.value[index] = { ...newData };
-  data = JSON.stringify(combItems.value[index])
-
-  ipcRenderer.send('requestSave', data, 'update');
-}
-
-const removeRow = (event, obj, type) => {
-  confirm.require({
-    message: 'Deseja apagar essa transação?',
-    header: 'Confirme',
-    position: 'right',
-    rejectProps: {
-      label: 'cancelar',
-      severity: 'secondary',
-      outlined: true
-    },
-    acceptProps: {
-      label: 'excluir',
-      severity: 'danger',
-    },
-    accept: () => {
-      combItems.value = combItems.value.filter(val => val._id !== obj._id);
-      console.log(combItems.value);
-      obj = JSON.stringify(obj)
-      ipcRenderer.send('requestRemove', obj)
-    }
-  })
 }
 ///////////////////////////////////////////////////////////
 

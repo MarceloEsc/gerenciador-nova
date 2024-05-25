@@ -7,8 +7,8 @@
                         Configurações
                   </p>
             </div>
-            <div class="inside">                  
-                  <p class="divider">                  
+            <div class="inside">
+                  <p class="divider">
                         <Button type="button" @click="exportDB" label="Exportar" severity="primary" />
                         Faz um backup portatil dos seus dados
                   </p>
@@ -16,17 +16,21 @@
                         <Button type="button" @click="importDB" label="Importar" severity="primary" />
                         Importa backup feito pelo programa
                   </p>
-                  <p class="divider">                  
-                        <Button type="button" @click="modalVisible = true" label="Gerenciar VTRs" severity="primary" />
+                  <p class="divider">
+                        <Button type="button"  label="Sincronizar" severity="primary" />
+                        Sincroniza seus dados manualmente na nuvem
                   </p>
-                  <Dialog v-model:visible="modalVisible" modal :style="{ width: '600px'}" class="vtr-modal">
+                  <p>
+                        <Button id="openManager" type="button" @click="openManager" icon="pi pi-angle-right" label="Gerenciar VTRs" severity="primary" />
+                  </p>
+                  <div id="manager" class='is-hidden manager-panel'>
                         <Button type="button" @click="newRow" label="Criar novo" severity="primary" style="margin-bottom: 20px" />
+                        <Button type="button" @click="modalVisible = true" label="migrar" severity="success" />
 
-                        <DataTable ref="vtrRef" :value="props.vtr_list" editMode="row" v-model:editingRows="editingList" 
-                        @row-edit-save="saveVTR($event)"
-                        @row-edit-cancel="console.log($event)">
+                        <DataTable :value="vtrModel" editMode="row" v-model:editingRows="editingList" @row-edit-save="saveVTR($event)"
+                              @update:rows="console.log('change')">
 
-                              <Column field="label" header="VTR" style="width: 150px">
+                              <Column field="vtr" header="VTR" style="width: 150px">
                                     <template #editor="{ data, field }">
                                           <InputText v-model="data[field]" style="width: 100px" @update:modelValue="data[field] = $event.toLocaleUpperCase()" />
                                     </template>
@@ -40,18 +44,29 @@
 
                               <Column :rowEditor="true"  bodyStyle="text-align:center" style="width: 100px" />
 
-                              <Column bodyStyle="text-align:center">
+                              <Column bodyStyle="text-align:center" style="width: 100px">
                                     <template #body="{ data, field }">
                                           <Button type="button" icon="pi pi-times" severity="danger" @click="removeRow($event, data)" />
                                     </template>
                               </Column>
                         </DataTable>
-                  </Dialog>
+                  </div>
             </div>
+
+            <Dialog v-model:visible="modalVisible" modal :style="{ width: '400px'}" :dismissableMask="true">
+                  <div style="display: flex; justify-content: space-evenly; align-items: center; flex-wrap: wrap;"> 
+                        <p style="font-size: 1.2rem; margin-bottom: 10px"  >Migrar dados para nova VTR</p> 
+                        <Dropdown v-model="oldVTR" :options="vtrModel" placeholder="Antiga VTR" optionLabel="vtr" style="min-width: 7.2rem"/>
+                        <p class="pi pi-angle-right" style="font-size: 1.3rem"></p>
+                        <Dropdown v-model="newVTR" :options="vtrModel" placeholder="Nova VTR" optionLabel="vtr"  style="min-width: 7.2rem"/>
+
+                        <Button type="button" @click="migrarVtr($event, oldVTR, newVTR)" label="Confirmar" severity="primary" style="margin-top: 15px" />
+                  </div>
+            </Dialog>
       </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
 
 import Dialog from 'primevue/dialog';
@@ -59,15 +74,18 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import Button from "primevue/button";
+import Dropdown from 'primevue/dropdown';
 
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 console.log('version '+window.electron.process.env.npm_package_version);
 
-const props = defineProps(['vtr_list'])
-const emit = defineEmits(['closeMenu', 'removeVTR', 'saveVTR'])
 const ipcRenderer = window.electron.ipcRenderer
+const vtrModel = defineModel('vtrList')
+const emit = defineEmits(['closeMenu', 'removeVTR', 'saveVTR', 'migrarVtr', 'populateVTR', 'requestCombustivelData'])
+const oldVTR = ref()
+const newVTR = ref()
 
 const exportDB = () => {
       ipcRenderer.send('export:DB')
@@ -87,11 +105,14 @@ onMounted(() => {
                   return
             }
             ipcRenderer.send('requestData:Combustivel')
-            toast.add({ severity: 'success', detail: `Importado com sucesso`, life: 3000 })
+            toast.add({ severity: 'success', detail: 'Importado com sucesso', life: 3000 })
       })
 })
 
-const vtrRef = ref()
+onUnmounted(() => {
+      ipcRenderer.removeAllListeners('DB:result')
+})
+
 const editingList = ref([])
 const modalVisible = ref(false)
 
@@ -99,18 +120,35 @@ const removeRow = (event, data) => { emit('removeVTR', data) }
 
 const saveVTR = (event) => {
       let newD = false
-      if (event.data.label !== event.newData.label) newD = true
-      else if (event.data.placa !== event.newData.placa) newD = true
+      if (event.data.vtr !== event.newData.vtr || event.data.placa !== event.newData.placa) 
+            newD = true
 
       if (newD) emit('saveVTR', event.data, event.newData)
 }
 const newRow = () => {
-      props.vtr_list.unshift({
-            label: "novo",
-            placa: "novo",
-            tag: "vtr",
-            _id: uuidv4(),
-      })
+      ipcRenderer.send('insertVTR', JSON.stringify({ vtr: "novo", placa: "novo", }))
+      emit('populateVTR')
+}
+
+const migrarVtr = (event, oldData, newData) => {
+      if (!oldData || !newData || oldData  == newData) {
+            toast.add({ severity: 'error', detail: 'Escolha uma VTR válida para migrar!', life: 3000 })
+            return
+      }
+      emit('migrarVtr', oldData, newData)
+      emit('requestCombustivelData')
+      toast.add({ severity: 'success', detail: `Dados da ${oldData.vtr} foram inseridos na ${newData.vtr}`, life: 3000 })
+      newVTR.value = null
+      oldVTR.value = null
+      modalVisible.value = false
+}
+
+const openManager = (event) => {
+      const managerBtn = document.getElementById('openManager').firstElementChild.classList
+      const manager = document.getElementById('manager').classList
+      manager.toggle('is-hidden')
+      managerBtn.toggle('pi-angle-right')
+      managerBtn.toggle('pi-angle-down')
 }
 
 </script>
@@ -149,12 +187,20 @@ const newRow = () => {
       }
       Button {
             margin-right: 15px;
-      }      
+      }
+      .manager-panel {
+            max-width: 600px;
+            margin-left: 5px;
+            padding: 10px;
+      }
       @media (prefers-color-scheme: dark) {
             .view {
                   background: #1b1f29;
             }
             .navbar {
+                  background: #14161a;
+            }
+            .manager-panel {
                   background: #14161a;
             }
       }
@@ -165,11 +211,9 @@ const newRow = () => {
             .navbar {
                   background: #bbb;
             }
+            .manager-panel {
+                  background: #bbb;
+            }
       }
 
-</style>
-<style>
-      .vtr-modal>.p-dialog-content {
-            overflow-y: auto;
-      }
 </style>

@@ -4,7 +4,7 @@ const { join } = require('path')
 
 /**
  * @param {string} type
- * @param {{date: string, state: boolean}} hasDate
+ * @param {{timestamp: string, state: boolean}} hasDate
  * @param {{vtr: string, state: boolean}} hasVTR
  * @param {Array} data
  */
@@ -19,8 +19,8 @@ export function montarPDF(type, hasDate, hasVTR, data) {
       doc.setFontSize(15);
 
       if (type == 'combustivel') {
-            const mes = new Date(hasDate.date).toLocaleString('pt-BR', { month: 'long' }).toLocaleUpperCase()
-            const ano = new Date(hasDate.date).toLocaleString('pt-BR', { year: 'numeric' })
+            const mes = new Date(hasDate.timestamp).toLocaleString('pt-BR', { month: 'long' }).toLocaleUpperCase()
+            const ano = new Date(hasDate.timestamp).toLocaleString('pt-BR', { year: 'numeric' })
             let i = 1
             let total = 0
             let page = 1
@@ -56,10 +56,10 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                         if (colorN == 1) colorN = 0
                         else colorN = 1
 
-                        doc.text(`${fatura.date}`, pageWidth / 2 - 30, altura + (i * 10), { align: 'left' });
-                        doc.text(`${fatura.cost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, pageWidth / 2 + 15, altura + (i * 10), { align: 'left' });
+                        doc.text(`${fatura.timestamp}`, pageWidth / 2 - 30, altura + (i * 10), { align: 'left' });
+                        doc.text(`${fatura.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, pageWidth / 2 + 15, altura + (i * 10), { align: 'left' });
 
-                        total += fatura.cost
+                        total += fatura.price
                         i++
                   });
             }
@@ -93,9 +93,9 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                         else colorN = 1
 
                         doc.text(`${fatura.vtr}`, pageWidth / 2 - 30, altura + (i * 10), { align: 'left' });
-                        doc.text(`${fatura.cost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, pageWidth / 2 + 15, altura + (i * 10), { align: 'left' });
+                        doc.text(`${fatura.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, pageWidth / 2 + 15, altura + (i * 10), { align: 'left' });
 
-                        total += fatura.cost
+                        total += fatura.price
                         i++
                   });
             }
@@ -125,10 +125,10 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                         if (colorN == 1) colorN = 0
                         else colorN = 1
 
-                        doc.text(`${fatura.date}`, pageWidth / 2 - 30, altura + (i * 10), { align: 'left' });
-                        doc.text(`${fatura.cost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, pageWidth / 2 + 15, altura + (i * 10), { align: 'left' });
+                        doc.text(`${fatura.timestamp}`, pageWidth / 2 - 30, altura + (i * 10), { align: 'left' });
+                        doc.text(`${fatura.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, pageWidth / 2 + 15, altura + (i * 10), { align: 'left' });
 
-                        total += fatura.cost
+                        total += fatura.price
                         i++
                   });
             }

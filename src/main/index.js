@@ -1,16 +1,19 @@
-import { app, shell, BrowserWindow, ipcMain, Notification, nativeTheme, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
-import { watch } from 'fs'
+import { watch, cp } from 'fs'
 import icon from '../../resources/favicon.ico?asset'
 const windowStateKeeper = require('electron-window-state')
 
 const { PdfReader } = require('pdfreader')
 const { writeFileSync, readFileSync } = require('fs')
-import { faturaLog, consultaPDF, consultaTag, saveData, removeData, changeBulkVTR, importDB, exportDB, getVTRList, useVTRList, saveVTR } from './backend.js'
-import { montarPDF } from './export.js'
-import { getMetaData, importExcel, importExcelAll } from './import.js'
+import { importDB, exportDB } from './backend.js'
+import { montarPDF } from './exportPdf.js'
+import { getMetaData, importExcel, importExcelAll } from './importExcel.js'
+import { faturaLog } from './pdf-reader.js'
+import { populateVTR } from './vtr-handler.js'
+import db from './db.js'
 
 //autoUpdater.forceDevUpdateConfig = true
 autoUpdater.autoDownload = false
@@ -38,7 +41,7 @@ function createWindow() {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
     }
   })
 
@@ -65,7 +68,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   nativeTheme.themeSource = 'dark'
-  electronApp.setAppUserModelId('com.electron')
+  //electronApp.setAppUserModelId('com.electron')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -111,68 +114,19 @@ app.on('window-all-closed', () => {
   }
 })
 
-const toggleTheme = () => {
+ipcMain.on('toggleTheme', (event) => {
   let theme = nativeTheme.themeSource
   if (theme == 'light' || theme == 'system') {
     nativeTheme.themeSource = 'dark'
     return
   }
   nativeTheme.themeSource = 'light'
-}
-
-ipcMain.on('toggleTheme', (event) => toggleTheme())
-ipcMain.on('init:GetTheme', (event) => {
-  event.reply('init:RecieveTheme', nativeTheme.themeSource)
 })
+ipcMain.handle('init:GetTheme', (event) => nativeTheme.themeSource)
 
-ipcMain.on('getVTRList', async (event, VTRlist) => {
-  VTRlist = JSON.parse(VTRlist)
-  /* useVTRList(VTRlist)
-  return */
-  let list = await getVTRList(VTRlist)
-  event.reply('recVTRList', list)
-})
-
-ipcMain.on('saveVTR', (event, data) => {
-  saveVTR(JSON.parse(data))
-})
-
-//TO-DO montar um arquivo de backup e salvar
-ipcMain.on('requestData:all', (event) => { })
-
-ipcMain.on('requestData:Combustivel', (event) => {
-  consultaTag('combustivel').then((result) => event.reply('requestData:res', result, 'combustivel'))
-})
-ipcMain.on('requestData:Manutencao', (event) => {
-  consultaTag('manutencao').then((result) => event.reply('requestData:res', result, 'manutencao'))
-})
-
-const callParse = new PdfReader()
-
-ipcMain.on('sendData:converter-pdf', (event, fullpath) => {
-  console.log('converter ' + fullpath)
-  callParse.parseFileItems(fullpath, faturaLog)
-
-  setTimeout(() => {
-    consultaPDF().then((result) => {
-      //console.log(result)
-      event.reply('retrieveData:converter-pdf', result)
-    })
-  }, 700)
-})
-
-ipcMain.on('requestSave', (event, data, type) => {
-  saveData(JSON.parse(data), type) /*  console.log(JSON.parse(data), type); */
-})
-
-ipcMain.on('requestRemove', (event, doc) => {
-  console.log(JSON.parse(doc))
-  removeData(JSON.parse(doc))
-})
-
-ipcMain.on('changeBulkVTR', async (event, oldData, newData) => {
-  await changeBulkVTR(JSON.parse(oldData), JSON.parse(newData))
-  consultaTag('combustivel').then((result) => event.reply('requestData:res', result, 'combustivel'))
+ipcMain.handle('requestData:Combustivel', (event) => {
+  /* consultaTag('combustivel').then((result) => event.reply('requestData:res', result, 'combustivel')) */
+  return db.getCombustivel()
 })
 
 ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
@@ -185,7 +139,7 @@ ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
   if (type == 'combustivel') {
     let date
     if (hasDate.state) {
-      date = hasDate.date.split('/')
+      date = hasDate.timestamp.split('/')
       date = date[1] + '-' + date[0]
     }
     if (hasDate.state && hasVTR.state) fileName = 'Combustível-' + data[0].vtr + '-' + date
@@ -279,44 +233,78 @@ ipcMain.on('import:Excel', async (event, fullpath, type, workSheet) => {
 ipcMain.on('export:DB', async (event) => {
   let date = new Date().toLocaleDateString().replace(/\//g, '-')
   let result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
-    defaultPath: `DB-backup-${date}.json`,
-    filters: [{ name: 'JSON', extensions: ['json'] }]
+    defaultPath: `DB-backup-${date}.db`,
+    filters: [{ name: 'db', extensions: ['db'] }]
   })
   if (result.canceled) return null
-  let backup
-  await exportDB().then(items => { backup = JSON.stringify(items, null, 2) })
   try {
-    writeFileSync(result.filePath, backup)
-    console.log(result.filePath);
+    db.backupExport(result.filePath)
   } catch (err) {
-    event.reply('DB:result', '', 'error')
-    return
+    console.error(err);
   }
-  event.reply('DB:result', result.filePath, 'export')
 })
 
 ipcMain.on('import:DB', async (event) => {
+  let defaultPath = (app.getPath('userData') + `/nova.db`)
   let result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
-    filters: [{ name: 'JSON', extensions: ['json'] }]
+    filters: [{ name: 'db', extensions: ['db'] }]
   })
-  if (result.canceled) return
-  let backup = readFileSync(result.filePaths[0])
-  await importDB(JSON.parse(backup)).then(val => {
-    event.reply('DB:result', backup, 'import')
-  }).catch(err => {
-    event.reply('DB:result', '', 'error')
+  if (result.canceled) return null
+  db.close()
+  cp(result.filePaths[0], defaultPath, { force: true }, (err) => {
+    if (err) {
+      console.error(err);
+    }
   })
+  setTimeout(() => {
+    db.importBackup(defaultPath)
+  }, 1000);
+
 })
+
+function startupCheckDBSynced(params) {
+  // TO-DO
+}
 
 setInterval(async () => {
   let date = new Date().toLocaleDateString().replace(/\//g, '-')
-  let backup
-  await exportDB().then(items => { backup = JSON.stringify(items, null, 2) })
+  let defaultPath = (app.getPath('userData') + `/DB-backup-${date}.db`)
   try {
-    writeFileSync((app.getPath('userData') + `/DB-backup-${date}.json`), backup)
-    console.log((app.getPath('userData') + `/DB-backup-${date}.json`));
+    // APAGAR BACKUPS JÁ EXISTENTES
+    // MANDAR PRA NUVEM
+    db.backupExport(defaultPath)
+    console.log(defaultPath);
   } catch (err) {
     console.log(err);
-    return
   }
-}, 600000);
+}, 100000);
+
+const callParse = new PdfReader()
+
+ipcMain.handle('sendData:converter-pdf', (event, fullpath) => {
+  console.log('converter ' + fullpath)
+  callParse.parseFileItems(fullpath, faturaLog)
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const result = db.getFaturasTemp()
+      resolve(result)
+    }, 500);
+  })
+})
+
+ipcMain.handle('populateVTR', async (event) => {
+  let result = db.getVTR()
+  if (result.length == 0) return populateVTR()
+  else return result
+});
+
+ipcMain.on('insertFaturas', (event, data) => db.insertFaturas(data))
+
+ipcMain.on('insertVTR', (event, data) => db.insertVTR(data))
+
+ipcMain.on('deleteEntry', (event, table, data) => db.deleteEntry(table, data))
+
+ipcMain.on('updateVTR', (event, oldData, newData) => db.updateVTR(oldData, newData))
+
+ipcMain.on('updateFaturas', (event, oldData, newData, type) => db.updateFaturas(oldData, newData, type))

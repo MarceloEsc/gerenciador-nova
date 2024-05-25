@@ -5,7 +5,7 @@
 
             <Toolbar>
                   <template #start>
-                        <input type="file" id="arquivoPdf" accept=".pdf" @change="textPathAndSendConvert('arquivoPdf')"
+                        <input type="file" id="arquivoPdf" accept=".pdf" @change="textPathAndSendConvert"
                               class="pdf-input">
                   </template>
                   <template #end>
@@ -14,12 +14,12 @@
                   </template>
             </Toolbar>
 
-            <DataTable ref="combDataTable" :value="combModalItems" dataKey="_id" v-model:editingRows="combEditingRows"
+            <DataTable ref="combDataTable" :value="combModalItems" dataKey="id" v-model:editingRows="combEditingRows"
                   editMode="row" v-model:selection="combEditingRows"
-                  @row-edit-save="onRowEditSave($event, 'combustivel')"
+                  @row-edit-save="onRowEditSave($event)"
                   @row-edit-cancel="console.log('cancelado' + $event.newData._id)" scrollable scrollHeight="60vh">
 
-                  <Column field="date" header="Data" style="width: 20%">
+                  <Column field="timestamp" header="Data" style="width: 20%">
                         <template #editor="{ data, field }">
                               <Calendar v-model="data[field]" dateFormat="dd/mm/yy" mask="99/99/9999"
                                     @date-select="  data[field] = convert.convertDateToFormatString($event)" />
@@ -28,8 +28,8 @@
 
                   <Column field="vtr" header="VTR" style="width: 15%">
                         <template #editor="{ data, field }">
-                              <Dropdown v-model="data[field]" filter :options="vtr_list" optionLabel="label"
-                                    optionValue="label" :placeholder="data[field]" />
+                              <Dropdown v-model="data[field]" filter :options="props.vtrList" optionLabel="vtr"
+                                    optionValue="vtr" :placeholder="data[field]" />
                         </template>
                   </Column>
 
@@ -47,7 +47,7 @@
                         </template>
                   </Column>
 
-                  <Column field="cost" header="Valor" style="width: 15%">
+                  <Column field="price" header="Valor" style="width: 15%">
                         <template #body="{ data, field }">
                               {{ convert.formatCurrency(data[field]) }}
                         </template>
@@ -61,7 +61,7 @@
                   <Column style="width: 10%; min-width: 8rem" bodyStyle="text-align:center">
                         <template #body="{ data }">
                               <Button type="button" label="Excluir" icon="pi pi-delete-left" severity="danger"
-                                    @click="console.log(data), removeRow(data._id, 'combustivel')" />
+                                    @click="console.log(data), removeRow(data.id)" />
                         </template>
                   </Column>
             </DataTable>
@@ -69,13 +69,13 @@
             <div class="flex justify-content-end gap-2">
                   <Button type="button" label="Cancelar" severity="secondary" @click="emit('closeModal', false)" />
                   <Button type="button" label="Salvar" severity="primary"
-                        @click="saveData('combustivel'), clearForm('combustivel')" />
+                        @click="saveData(), clearForm()" />
             </div>
       </Dialog>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref } from 'vue';
 import Toolbar from 'primevue/toolbar';
 import Dialog from 'primevue/dialog';
 import Button from "primevue/button";
@@ -89,8 +89,8 @@ import Dropdown from 'primevue/dropdown';
 import { v4 as uuidv4 } from 'uuid';
 import { convert } from '../scripts/convert';
 
-const props = defineProps(['type', 'combDataTable', 'manDataTable', 'vtr_list'])
-const emit = defineEmits(['closeModal'])
+const props = defineProps(['type', 'combDataTable', 'manDataTable', 'vtrList'])
+const emit = defineEmits(['closeModal', 'requestCombustivelData'])
 const model = defineModel('modalVisible')
 
 const ipcRenderer = window.electron.ipcRenderer
@@ -99,71 +99,56 @@ const combModalVisibleCopy = model
 const combModalItems = ref([])
 const combEditingRows = ref([])
 
-const textPathAndSendConvert = (path) => {
-      let fullpath = document.getElementById(path).files[0].path;
+const textPathAndSendConvert = () => {
+      let fullpath = document.getElementById('arquivoPdf').files[0].path;
       console.log(fullpath)
-      ipcRenderer.send('sendData:converter-pdf', fullpath)
+      combModalItems.value = []
+      ipcRenderer.invoke('sendData:converter-pdf', fullpath).then(res => {
+            console.log(res);
+            res.forEach(item => {
+                  item.timestamp = convert.convertDateToFormatString(item.timestamp)
+                  combModalItems.value.push(item)
+            });
+      })
 }
 
-onMounted(() => {
-      ipcRenderer.on('retrieveData:converter-pdf', (res, dataRes) => {
-            //console.log(dataRes);
-            dataRes.forEach(data => {
-                  combModalItems.value.push(data.doc)
-            });
-            convert.sortDate(combModalItems.value)
-            combModalItems.value.forEach(doc => {
-                  doc.tag = 'combustivel'
-                  doc.date = convert.convertDateToFormatString(doc.date)
-            })
-            //console.log(combModalItems.value)
-      })
-})
-
-onUnmounted(() => {
-      ipcRenderer.removeAllListeners('retrieveData:converter-pdf')
-})
-
-const onRowEditSave = (event, typeC) => {
+const onRowEditSave = (event) => {
       let { newData, index } = event;
       combModalItems.value[index] = newData;
       console.log(combModalItems.value[index]);
 }
 
-const saveData = (type) => {
-      let data;
-      data = JSON.stringify(combModalItems.value)
-      ipcRenderer.send('requestSave', data, 'save')
-      ipcRenderer.send('requestData:Combustivel')
-      combModalItems.value = []
-      combEditingRows.value = []
-
-      openNewManutItem()
+const saveData = () => {
+      let data = [...combModalItems.value]
+      data.forEach(item => {
+            item.timestamp = convert.convertDateToMilliseconds(item.timestamp)
+      })
+      ipcRenderer.send('insertFaturas', JSON.stringify(data))
+      emit('requestCombustivelData')
+      clearForm()
 }
 
-const removeRow = (id, type) => {
-      combModalItems.value = combModalItems.value.filter(val => val._id !== id);
-      combEditingRows.value = combEditingRows.value.filter(val => val._id !== id)
+const removeRow = (id) => {
+      combModalItems.value = combModalItems.value.filter(val => val.id !== id);
+      combEditingRows.value = combEditingRows.value.filter(val => val.id !== id)
 }
 
-const addNewItem = (type) => {
+const addNewItem = () => {
       const obj = {
-            _id: uuidv4(),
-            date: convert.convertDateToFormatString(new Date()),
+            timestamp: convert.convertDateToFormatString(new Date()),
             vtr: 'VTR 00',
-            driver: '',
             lt: null,
             odometer: null,
-            cost: 0,
+            price: null,
       }
       combModalItems.value.push(obj)
       return
 }
 
-
-const clearForm = (typeC) => {
+const clearForm = () => {
       combModalItems.value = []
       combEditingRows.value = []
+      document.getElementById('arquivoPdf').value = null
 }
 </script>
 

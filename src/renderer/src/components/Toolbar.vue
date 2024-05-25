@@ -125,43 +125,6 @@ const items = [
                   ipcRenderer.send('export:PDF', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))
             },
       },
-      /* {
-            label: 'Excel',
-            icon: 'pi pi-file-excel',
-            comand: (event, type) => {
-                  console.log(type + ' excel')
-                  if (type == 'combustivel') {
-                        if (props.combDataTable.processedData.length == 0) {
-                              toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
-                              return
-                        }
-                        if (props.combHasDateFilter.state == false) {
-                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data ou VTR para exportar!', life: 3000 })
-                              return
-                        }
-                        else if (props.combHasVTRFilter.state == true) {
-                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Remova o filtro de VTR!', life: 3000 })
-                              return
-                        }
-                        ipcRenderer.send('export:Excel', type, JSON.stringify(props.combHasDateFilter), JSON.stringify(props.combHasVTRFilter), JSON.stringify(props.combDataTable.processedData))
-                        return
-                  }
-
-                  if (props.manDataTable.processedData.length == 0) {
-                        toast.add({ severity: 'error', summary: 'Atenção', detail: 'Nenhum dado pronto para exportar!', life: 3000 })
-                        return
-                  }
-                  if (props.manHasDateFilter.state == false) {
-                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma data para exportar!', life: 3000 })
-                        return
-                  }
-                  else if (props.manHasVTRFilter.state == true) {
-                        toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Remova o filtro de VTR!', life: 3000 })
-                        return
-                  }
-                  ipcRenderer.send('export:Excel', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))
-            },
-      } */
 ]
 
 const selectedPage = ref()

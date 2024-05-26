@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
 import { watch, cp } from 'fs'
+import 'dotenv/config'
 import icon from '../../resources/favicon.ico?asset'
 const windowStateKeeper = require('electron-window-state')
 
@@ -13,6 +14,7 @@ import { getMetaData, importExcel, importExcelAll } from './importExcel.js'
 import { faturaLog } from './pdf-reader.js'
 import { populateVTR } from './vtr-handler.js'
 import db from './db.js'
+import sync from './sync.js'
 
 //autoUpdater.forceDevUpdateConfig = true
 autoUpdater.autoDownload = false
@@ -20,6 +22,9 @@ autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.autoRunAppAfterInstall = true
 //console.log(autoUpdater);
 
+/**
+ * @type {BrowserWindow}
+ */
 let mainWindow
 
 function createWindow() {
@@ -52,6 +57,13 @@ function createWindow() {
     mainWindow.show()
   })
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    //sync.checkSyncState()
+    if (sync.test()) {
+      mainWindow.webContents.send('syncComplete')
+    }
+  })
+
   //handle _blank links
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -66,40 +78,36 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  nativeTheme.themeSource = 'dark'
-  //electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.gerenciador.nova')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
   createWindow()
-  setTimeout(() => {
+  autoUpdater.checkForUpdatesAndNotify()
+  /* setTimeout(() => {
+    // FORGOT WHY I DID THIS AND I HOPE IT DOESNT BRAKE CAUSE I COMMENTED IT
     autoUpdater.checkForUpdatesAndNotify()
-  }, 2000)
+  }, 2000) */
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
-autoUpdater.on('update-available', (info) => {
-  autoUpdater.downloadUpdate()
-})
-autoUpdater.on('error', (err) => {
-  dialog.showErrorBox('Erro', err)
-})
+
+autoUpdater.on('update-available', (info) => autoUpdater.downloadUpdate())
+autoUpdater.on('error', (err) => dialog.showErrorBox('Erro', err))
 autoUpdater.on('update-downloaded', async (info) => {
   console.log(info)
-  //REMEMBER YOU IDIIIIIIIIIIIOT
-  await dialog
-    .showMessageBox(BrowserWindow.getFocusedWindow(), {
-      type: 'question',
-      buttons: ['Atualizar', 'Cancelar'],
-      noLink: true,
-      title: 'Aviso',
-      cancelId: 99,
-      message: 'Atualização disponível, instalar agora?'
-    })
+  await dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
+    type: 'question',
+    buttons: ['Atualizar', 'Cancelar'],
+    noLink: true,
+    title: 'Aviso',
+    cancelId: 99,
+    message: 'Atualização disponível, instalar agora?'
+  })
     .then((response) => {
       if (response.response === 0 && !is.dev) {
         autoUpdater.quitAndInstall(true, true);
@@ -122,11 +130,6 @@ ipcMain.on('toggleTheme', (event) => {
   nativeTheme.themeSource = 'light'
 })
 ipcMain.handle('init:GetTheme', (event) => nativeTheme.themeSource)
-
-ipcMain.handle('requestData:Combustivel', (event) => {
-  /* consultaTag('combustivel').then((result) => event.reply('requestData:res', result, 'combustivel')) */
-  return db.getCombustivel()
-})
 
 ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
   hasDate = JSON.parse(hasDate)
@@ -261,18 +264,14 @@ ipcMain.on('import:DB', async (event) => {
 
 })
 
-function startupCheckDBSynced(params) {
-  // TO-DO
-}
-
 setInterval(async () => {
   let date = new Date().toLocaleDateString().replace(/\//g, '-')
   let defaultPath = (app.getPath('userData') + `/DB-backup-${date}.db`)
   try {
-    // APAGAR BACKUPS JÁ EXISTENTES
     // MANDAR PRA NUVEM
+    // send date and array of Faturas and VTR
     db.backupExport(defaultPath)
-    console.log(defaultPath);
+    console.log(defaultPath + ' ' + new Date().toLocaleDateString());
   } catch (err) {
     console.log(err);
   }
@@ -298,12 +297,16 @@ ipcMain.handle('populateVTR', async (event) => {
   else return result
 });
 
-ipcMain.on('insertFaturas', (event, data) => db.insertFaturas(data))
+ipcMain.handle('requestData:Combustivel', (event) => db.getCombustivel())
 
-ipcMain.on('insertVTR', (event, data) => db.insertVTR(data))
+ipcMain.on('insertFaturas', (event, data) => db.insertFaturas(JSON.parse(data)))
 
-ipcMain.on('deleteEntry', (event, table, data) => db.deleteEntry(table, data))
+ipcMain.on('insertVTR', (event, data) => db.insertVTR(JSON.parse(data)))
 
-ipcMain.on('updateVTR', (event, oldData, newData) => db.updateVTR(oldData, newData))
+ipcMain.on('deleteEntry', (event, table, data) => db.deleteEntry(table, JSON.parse(data)))
 
-ipcMain.on('updateFaturas', (event, oldData, newData, type) => db.updateFaturas(oldData, newData, type))
+ipcMain.on('updateVTR', (event, oldData, newData) => db.updateVTR(JSON.parse(oldData), JSON.parse(newData)))
+
+ipcMain.on('updateFaturas', (event, oldData, newData, type) => db.updateFaturas(JSON.parse(oldData), JSON.parse(newData), type))
+
+ipcMain.on('checkSync', () => sync.checkSyncState())

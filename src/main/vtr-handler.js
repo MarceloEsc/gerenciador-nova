@@ -35,7 +35,7 @@ export function convertVTR(placa) {
 }
 
 export function populateVTR() {
-      db.insertVTR(JSON.stringify(VTR_STANDARD), true)
+      db.insertVTR(VTR_STANDARD, true)
       return new Promise((resolve, reject) => {
             let result = db.getVTR()
             resolve(result)

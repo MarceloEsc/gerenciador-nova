@@ -86,7 +86,6 @@ import Calendar from 'primevue/calendar';
 import InputNumber from 'primevue/inputnumber';
 import Dropdown from 'primevue/dropdown';
 
-import { v4 as uuidv4 } from 'uuid';
 import { convert } from '../scripts/convert';
 
 const props = defineProps(['type', 'combDataTable', 'manDataTable', 'vtrList'])

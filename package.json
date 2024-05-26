@@ -21,14 +21,14 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
+    "axios": "^1.7.2",
     "better-sqlite3": "^10.0.0",
+    "dotenv": "^16.4.5",
     "electron-updater": "^6.2.1",
     "electron-window-state": "^5.0.3",
     "exceljs": "^4.4.0",
     "jspdf": "^2.5.1",
     "pdfreader": "^2.0.0",
-    "pouchdb": "^8.0.1",
-    "pouchdb-find": "^8.0.1",
     "primeicons": "^7.0.0",
     "primevue": "^4.0.0-beta.1",
     "uuid": "^9.0.1"

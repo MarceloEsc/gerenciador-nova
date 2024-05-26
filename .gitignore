@@ -3,5 +3,5 @@ dist
 out
 .DS_Store
 *.log*
-DB
+.env
 src/main/test.js

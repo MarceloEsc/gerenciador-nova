@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import { readdirSync, unlinkSync, statSync } from 'fs';
 const Database = require('better-sqlite3');
 console.log(app.getPath('userData'));
 let db = new Database((app.getPath('userData') + '/nova.db'));
@@ -37,7 +38,7 @@ function getFaturasTemp() {
  * @param { Array } data [ {timestamp, vtr, lt, odometer, price} ]
  */
 function insertFaturas(data) {
-      data = JSON.parse(data)
+      data = data
       const insert = db.prepare('insert into Faturas (timestamp, vtr, lt, odometer, price) values (@timestamp, @vtr, @lt, @odometer, @price)');
       const insertMany = db.transaction((data) => {
             for (const item of data) insert.run(item);
@@ -60,7 +61,7 @@ function insertFaturasTemp(data) {
  * @param { Array } data [ {vtr, placa} ]
  */
 function insertVTR(data, many) {
-      data = JSON.parse(data)
+      data = data
       if (many) {
             console.log(data);
             db.prepare('delete from VTR').run()
@@ -80,8 +81,8 @@ function insertVTR(data, many) {
  * @param { Array } data [ {timestamp, vtr, lt, odometer, price} ]
  */
 function updateFaturas(oldItem, newItem, type) {
-      oldItem = JSON.parse(oldItem)
-      newItem = JSON.parse(newItem)
+      oldItem = oldItem
+      newItem = newItem
       if (type == 'migrar') {
             const update = db.prepare('update Faturas set vtr = ? where vtr = ?');
             update.run(newItem.vtr, oldItem.vtr)
@@ -97,8 +98,8 @@ function updateFaturas(oldItem, newItem, type) {
  * @param { Array } data [ {vtr, placa} ]
  */
 function updateVTR(oldItem, newItem) {
-      oldItem = JSON.parse(oldItem)
-      newItem = JSON.parse(newItem)
+      oldItem = oldItem
+      newItem = newItem
       const update = db.prepare('update VTR set vtr = ?, placa = ? where id = ?');
       update.run(newItem.vtr, newItem.placa, oldItem.id)
 }
@@ -108,10 +109,10 @@ function updateVTR(oldItem, newItem) {
  * @param { Array } items [ {id} ]
  */
 function deleteEntry(table, items) {
-      items = JSON.parse(items)
       try {
             const multiQuery = db.transaction((data) => {
-                  for (const item of data) db.prepare(`delete from ${table} where id = ?`).run(item.id)
+                  for (const item of data)
+                        db.prepare(`delete from ${table} where id = ?`).run(item.id)
             })
             multiQuery(items)
       } catch (error) {
@@ -120,18 +121,36 @@ function deleteEntry(table, items) {
 }
 
 function backupExport(filePath) {
+      let regex = new RegExp(filePath.slice(-23, -14))
+      let path = filePath.slice(0, -23)
+      deleteObsoleteBackup(regex, path)
       db.backup(filePath)
-            .then(() => {
-                  console.log('backup complete!');
-            })
-            .catch((err) => {
-                  console.log('backup failed:', err);
-            });
+            .then(() => console.log('backup complete!'))
+            .catch((err) => console.log('backup failed:', err));
 }
 
 function importBackup(filePath) {
       console.log(filePath);
       db = new Database(filePath)
+}
+
+function getDBDate() {
+      const stats = statSync(app.getPath('userData') + '/nova.db');
+      return Date.parse(stats.mtime)
+}
+
+function deleteObsoleteBackup(regex, path) {
+      readdirSync(path)
+            .filter(file => regex.test(file))
+            .map(file => {
+                  console.log(`${path}/${file}`);
+                  return unlinkSync(`${path}/${file}`);
+            })
+}
+
+function deleteDBTable(table) {
+      const deleteTable = db.prepare(`delete from ${table}`)
+      deleteTable.run()
 }
 
 function close() {
@@ -140,5 +159,6 @@ function close() {
 
 export default {
       getCombustivel, getVTR, getFaturasTemp, insertFaturas, insertVTR, insertFaturasTemp,
-      deleteEntry, updateFaturas, updateVTR, backupExport, importBackup, close
+      deleteEntry, updateFaturas, updateVTR, backupExport, importBackup, getDBDate, deleteDBTable,
+      close
 }

@@ -218,9 +218,24 @@
     populateVTR()
   })
 
-  ipcRenderer.on('syncDataSent', () => {
-    toast.add({ severity: 'success', detail: 'Dados sincronizados', life: 2000 })
+  ipcRenderer.on('requestStatus', (event, result) => {
+    switch (result) {
+      case 'synced':
+        toast.add({ severity: 'info', detail: 'Seus dados estão em dia', life: 2000 })
+        break;
+      case 'reload':
+        toast.add({ severity: 'success', detail: 'Dados sincronizados da nuvem', life: 2000 })
+        break;
+      case 'sent':
+        toast.add({ severity: 'success', detail: 'Dados enviados para nuvem', life: 2000 })
+        break;
+      case 'error':
+        toast.add({ severity: 'error', detail: 'Houve um erro no contato com o servidor', life: 4000 })
+        break;
+    }
+
   })
+
 
   const importResExcel = (data) => {
     //console.log(data);

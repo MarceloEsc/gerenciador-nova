@@ -6,7 +6,6 @@ import { watch, cp } from 'fs'
 import 'dotenv/config'
 import icon from '../../resources/favicon.ico?asset'
 const windowStateKeeper = require('electron-window-state')
-
 const { PdfReader } = require('pdfreader')
 const { writeFileSync, readFileSync } = require('fs')
 import { montarPDF } from './exportPdf.js'
@@ -57,12 +56,8 @@ function createWindow() {
     mainWindow.show()
   })
 
-  mainWindow.webContents.on('did-finish-load', () => {
-    //sync.checkSyncState()
-    if (sync.test()) {
-      mainWindow.webContents.send('reloadData')
-    }
-  })
+  //DONT FORGET FOR FUCK SAKE
+  mainWindow.webContents.on('did-finish-load', () => /* syncDB() */console.log('window finish load'))
 
   //handle _blank links
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -241,8 +236,10 @@ ipcMain.on('export:DB', async (event) => {
   if (result.canceled) return null
   try {
     db.backupExport(result.filePath)
+    event.reply('DB:result', result.filePath, 'export')
   } catch (err) {
     console.error(err);
+    event.reply('DB:result', '', 'error')
   }
 })
 
@@ -261,29 +258,12 @@ ipcMain.on('import:DB', async (event) => {
   setTimeout(() => {
     db.importBackup(defaultPath)
     mainWindow.webContents.send('reloadData')
+    event.reply('DB:result', backup, 'import')
   }, 1000);
 
 })
 
-setInterval(async () => {
-  //let date = new Date().toLocaleDateString().replace(/\//g, '-')
-  //let defaultPath = (app.getPath('userData') + `/DB-backup-${date}.db`)
-  let res = await sync.checkSyncState()
-  if (res == 'reload') {
-    mainWindow.webContents.send('reloadData')
-  }
-  else if (rse == 'sent') {
-    mainWindow.webContents.send('syncDataSent')
-  }
-  /* try {
-    // MANDAR PRA NUVEM
-    // send date and array of Faturas and VTR
-    db.backupExport(defaultPath)
-    console.log(defaultPath + ' ' + new Date().toLocaleDateString());
-  } catch (err) {
-    console.log(err);
-  } */
-}, 300000);
+setInterval(async () => syncDB(), 300000);
 
 const callParse = new PdfReader()
 
@@ -317,12 +297,13 @@ ipcMain.on('updateVTR', (event, oldData, newData) => db.updateVTR(JSON.parse(old
 
 ipcMain.on('updateFaturas', (event, oldData, newData, type) => db.updateFaturas(JSON.parse(oldData), JSON.parse(newData), type))
 
-ipcMain.on('checkSync', async () => {
-  let res = await sync.checkSyncState()
-  if (res == 'reload') {
+ipcMain.on('checkSync', () => syncDB())
+
+async function syncDB() {
+  let result = await sync.checkSyncState()
+  if (result == 'reload') {
     mainWindow.webContents.send('reloadData')
   }
-  else if (rse == 'sent') {
-    mainWindow.webContents.send('syncDataSent')
-  }
-})
+  console.log(result);
+  mainWindow.webContents.send('requestStatus', result)
+}

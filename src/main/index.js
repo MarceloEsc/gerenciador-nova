@@ -57,7 +57,7 @@ function createWindow() {
   })
 
   //DONT FORGET FOR FUCK SAKE
-  mainWindow.webContents.on('did-finish-load', () => /* syncDB() */console.log('window finish load'))
+  mainWindow.webContents.on('did-finish-load', async () => await syncDB())
 
   //handle _blank links
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -109,6 +109,8 @@ autoUpdater.on('update-downloaded', async (info) => {
       }
     })
 })
+
+app.on('will-quit', async () => await syncDB())
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -320,4 +322,5 @@ async function syncDB() {
   }
   console.log(result);
   mainWindow.webContents.send('requestStatus', result)
+  return result
 }

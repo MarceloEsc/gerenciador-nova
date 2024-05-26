@@ -63,7 +63,6 @@ function insertFaturasTemp(data) {
 function insertVTR(data, many) {
       data = data
       if (many) {
-            console.log(data);
             db.prepare('delete from VTR').run()
             const insert = db.prepare('insert into VTR (vtr, placa) values (@vtr, @placa)');
             const multiQuery = db.transaction((data) => {

@@ -227,6 +227,19 @@ ipcMain.on('import:Excel', async (event, fullpath, type, workSheet) => {
   })
 })
 
+ipcMain.on('import:ExcelMultiple', async (event, files) => {
+  files = JSON.parse(files)
+  let data = []
+  Promise.all(files.map(async path => {
+    let items = await importExcelAll(path)
+    data = data.concat(items)
+  }))
+    .then(() => {
+      console.log('reply');
+      event.reply('importRes:Excel', data, 'multiple')
+    })
+})
+
 ipcMain.on('export:DB', async (event) => {
   let date = new Date().toLocaleDateString().replace(/\//g, '-')
   let result = await dialog.showSaveDialog(BrowserWindow.getFocusedWindow(), {
@@ -249,8 +262,9 @@ ipcMain.on('import:DB', async (event) => {
     filters: [{ name: 'db', extensions: ['db'] }]
   })
   if (result.canceled) return null
+  let backup = result.filePaths[0]
   db.close()
-  cp(result.filePaths[0], defaultPath, { force: true }, (err) => {
+  cp(backup, defaultPath, { force: true }, (err) => {
     if (err) {
       console.error(err);
     }

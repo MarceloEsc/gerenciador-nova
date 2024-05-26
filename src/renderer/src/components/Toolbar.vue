@@ -29,7 +29,7 @@
                         optionLabel="label" optionValue="label" style="min-width: 7.2rem" class="excel-drop"
                         @change="confirmImport(selectedPage, 'arquivoExcel')" />
                   <input type="file" id="arquivoExcel" accept=".xlsx" @change="textPathAndImportExcel('arquivoExcel')"
-                        class="pdf-input">
+                        multiple class="pdf-input">
             </template>
             <template #end>
                   <Button label="Importar PDF" severity="primary" @click="emit('openModal', true)"
@@ -51,25 +51,39 @@
       const toast = useToast();
 
       onMounted(() => {
-            ipcRenderer.on('importRes:Excel', (res, data, type) => {
-                  if (type == 'load') {
-                        excelPages.value = data
-                        excelPages.value.unshift({ label: 'Tudo' })
-                        return
-                  }
-                  console.log(data);
-                  manutencaoExportState.value = data
-                  emit('importResExcel', data)
-            })
+            if (props.type == 'manutencao') {
+                  ipcRenderer.on('importRes:Excel', (res, data, type) => {
+                        if (type == 'load') {
+                              excelPages.value = data
+                              excelPages.value.unshift({ label: 'Tudo' })
+                              return
+                        }
+                        if (type == 'multiple') {
+                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Visualização em tempo real está desativada para múltiplos arquivos', life: 3000 })
+                        }
+                        console.log(data);
+                        manutencaoExportState.value = data
+                        emit('importResExcel', data)
+                  })
+            }
       })
 
       const manutencaoExportState = ref([])
       const textPathAndImportExcel = (path) => {
             selectedPage.value = null
-            let fullpath = document.getElementById(path).files
-            if (fullpath.length > 0) {
-                  fullpath = fullpath[0].path;
-                  ipcRenderer.send('import:Excel', fullpath, 'load')
+            let files = document.getElementById(path).files
+
+            if (files.length > 1) {
+                  let filesSelected = []
+                  for (let file of files) {
+                        filesSelected.push(file.path)
+                  }
+                  emit('manutencaoExportState', null)
+                  ipcRenderer.send('import:ExcelMultiple', JSON.stringify(filesSelected), 'load')
+                  return
+            }
+            if (files.length > 0) {
+                  ipcRenderer.send('import:Excel', files[0].path, 'load')
                   return
             }
             ipcRenderer.send('import:Excel', null)

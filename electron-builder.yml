@@ -9,6 +9,8 @@ files:
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+extraFiles:
+    - ".env"
 asarUnpack:
   - resources/**
 win:
@@ -22,8 +24,6 @@ nsis:
   installerHeaderIcon: resources/favicon.ico
   oneClick: false
   allowToChangeInstallationDirectory: true
-  # #activate on prod
-  # deleteAppDataOnUninstall: false
 
 npmRebuild: false
 publish:

@@ -60,7 +60,7 @@ function createWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     //sync.checkSyncState()
     if (sync.test()) {
-      mainWindow.webContents.send('syncComplete')
+      mainWindow.webContents.send('reloadData')
     }
   })
 
@@ -260,22 +260,30 @@ ipcMain.on('import:DB', async (event) => {
   })
   setTimeout(() => {
     db.importBackup(defaultPath)
+    mainWindow.webContents.send('reloadData')
   }, 1000);
 
 })
 
 setInterval(async () => {
-  let date = new Date().toLocaleDateString().replace(/\//g, '-')
-  let defaultPath = (app.getPath('userData') + `/DB-backup-${date}.db`)
-  try {
+  //let date = new Date().toLocaleDateString().replace(/\//g, '-')
+  //let defaultPath = (app.getPath('userData') + `/DB-backup-${date}.db`)
+  let res = await sync.checkSyncState()
+  if (res == 'reload') {
+    mainWindow.webContents.send('reloadData')
+  }
+  else if (rse == 'sent') {
+    mainWindow.webContents.send('syncDataSent')
+  }
+  /* try {
     // MANDAR PRA NUVEM
     // send date and array of Faturas and VTR
     db.backupExport(defaultPath)
     console.log(defaultPath + ' ' + new Date().toLocaleDateString());
   } catch (err) {
     console.log(err);
-  }
-}, 100000);
+  } */
+}, 300000);
 
 const callParse = new PdfReader()
 
@@ -309,4 +317,12 @@ ipcMain.on('updateVTR', (event, oldData, newData) => db.updateVTR(JSON.parse(old
 
 ipcMain.on('updateFaturas', (event, oldData, newData, type) => db.updateFaturas(JSON.parse(oldData), JSON.parse(newData), type))
 
-ipcMain.on('checkSync', () => sync.checkSyncState())
+ipcMain.on('checkSync', async () => {
+  let res = await sync.checkSyncState()
+  if (res == 'reload') {
+    mainWindow.webContents.send('reloadData')
+  }
+  else if (rse == 'sent') {
+    mainWindow.webContents.send('syncDataSent')
+  }
+})

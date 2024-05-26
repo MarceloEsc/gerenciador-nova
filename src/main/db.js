@@ -158,7 +158,8 @@ function close() {
 }
 
 export default {
-      getCombustivel, getVTR, getFaturasTemp, insertFaturas, insertVTR, insertFaturasTemp,
-      deleteEntry, updateFaturas, updateVTR, backupExport, importBackup, getDBDate, deleteDBTable,
-      close
+      getCombustivel, getVTR, getFaturasTemp, insertFaturas,
+      insertVTR, insertFaturasTemp, deleteEntry, updateFaturas,
+      updateVTR, backupExport, importBackup, getDBDate,
+      deleteDBTable, close
 }

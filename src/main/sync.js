@@ -24,7 +24,8 @@ async function checkSyncState() {
       if (!authRes) return null;
 
       if (authRes.auth == 'autenticado' && authRes.state == 'behind') {
-            return syncSendLocalDB(authRes.date);
+
+            return await syncSendLocalDB(authRes.date);
       }
       else if (authRes.auth == 'autenticado' && authRes.state == 'ahead') {
             await dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
@@ -41,23 +42,21 @@ async function checkSyncState() {
                         }
                         else result = null;
                   })
-            return syncRecieveRemoteDB();
-      }
-      else if (authRes.auth == 'autenticado' && authRes.state == 'behind') {
-            return syncSendLocalDB(authRes.date);
+            return await syncRecieveRemoteDB();
       }
 }
 
-function syncSendLocalDB() {
+async function syncSendLocalDB() {
       let request = getRequestOptions('putDB', date);
-      axios.request(request)
+      await axios.request(request)
             .then(response => console.log(response.status))
             .catch(error => console.error(error));
+      return 'sent'
 }
 
-function syncRecieveRemoteDB() {
+async function syncRecieveRemoteDB() {
       let request = getRequestOptions('putDB');
-      axios.request(request)
+      await axios.request(request)
             .then(response => {
                   db.deleteDBTable('Faturas');
                   let { faturas, vtr } = proccessData(response.data)
@@ -65,12 +64,13 @@ function syncRecieveRemoteDB() {
                   db.insertVTR(vtr, true)
             })
             .catch(error => console.error(error));
+      return 'reload'
 }
 
 function proccessData(data) {
       let object = { faturas: [], vtr: [] }
-      object.faturas = response.data
-      object.vtr = response.data
+      object.faturas = response.data.faturas
+      object.vtr = response.data.vtr
       return object
 }
 
@@ -98,9 +98,10 @@ function getRequestOptions(type, date) {
                   };
                   return getDB
             case 'putDB':
-                  let object = { faturas: [], vtr: [] }
-                  object.faturas = db.getCombustivel()
-                  object.vtr = db.getVTR()
+                  let data = { faturas: [], vtr: [] }
+                  data.faturas = db.getCombustivel()
+                  data.vtr = db.getVTR()
+
                   let putDB = {
                         method: 'PUT',
                         url: 'https://nova-db-sync-service.marceloescobarjunior.workers.dev/db',
@@ -108,7 +109,7 @@ function getRequestOptions(type, date) {
                         data: {
                               key: process.env.CLOUDFLARE_API_KEY,
                               date: date,
-                              data: object
+                              data: data
                         }
                   };
                   return putDB

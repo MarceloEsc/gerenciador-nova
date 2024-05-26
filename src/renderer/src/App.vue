@@ -1,4 +1,5 @@
 <template>
+  <Toast position="bottom-right" />
   <Tabs @tab="changeTab" />
   <Config id="configMenu" v-if="toggleConfigMenu" @closeMenu="toggleMenu" v-model:vtrList="vtrList"
     @removeVTR="removeVTR" @saveVTR="saveVTR" @migrarVtr="migrarVtr" @populateVTR="populateVTR"
@@ -120,7 +121,6 @@
 
   //PRIMEVUE COMPONENTS
   import { FilterMatchMode } from 'primevue/api';
-
   import Button from "primevue/button";
   import DataTable from 'primevue/datatable';
   import Column from 'primevue/column';
@@ -129,6 +129,8 @@
   import Dropdown from 'primevue/dropdown';
   import ConfirmDialog from 'primevue/confirmdialog';
   import { useConfirm } from "primevue/useconfirm";
+  import Toast from 'primevue/toast';
+  import { useToast } from 'primevue/usetoast';
 
   //CUSTOM COMPONENTS
   import Tabs from './components/Tabs.vue';
@@ -141,6 +143,7 @@
 
   const ipcRenderer = window.electron.ipcRenderer
   const confirm = useConfirm()
+  const toast = useToast();
 
   const combItems = ref([
     /* {
@@ -210,7 +213,14 @@
     })
   }
 
-  ipcRenderer.on('syncComplete', () => requestCombustivelData())
+  ipcRenderer.on('reloadData', () => {
+    requestCombustivelData()
+    populateVTR()
+  })
+
+  ipcRenderer.on('syncDataSent', () => {
+    toast.add({ severity: 'success', detail: 'Dados sincronizados', life: 2000 })
+  })
 
   const importResExcel = (data) => {
     //console.log(data);

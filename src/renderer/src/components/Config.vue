@@ -1,6 +1,5 @@
 <template>
       <div class="view">
-            <Toast position="bottom-right" />
             <div class="navbar">
                   <Button type="button" id="menuBtn" @click="emit('closeMenu')" severity="primary" label="voltar"
                         icon="pi pi-angle-left" />
@@ -84,9 +83,10 @@
       import Button from "primevue/button";
       import Dropdown from 'primevue/dropdown';
 
-      import Toast from 'primevue/toast';
       import { useToast } from 'primevue/usetoast';
+      import { useConfirm } from "primevue/useconfirm";
       const toast = useToast();
+      const confirm = useConfirm()
       console.log('version ' + window.electron.process.env.npm_package_version);
 
       const ipcRenderer = window.electron.ipcRenderer
@@ -124,7 +124,23 @@
       const editingList = ref([])
       const modalVisible = ref(false)
 
-      const removeRow = (event, data) => { emit('removeVTR', data) }
+      const removeRow = (event, data) => {
+            confirm.require({
+                  message: 'Deseja apagar essa VTR?',
+                  header: 'Confirme',
+                  rejectProps: {
+                        label: 'cancelar',
+                        severity: 'secondary',
+                        outlined: true
+                  },
+                  acceptProps: {
+                        label: 'excluir',
+                        severity: 'danger',
+                  },
+                  accept: () => emit('removeVTR', data)
+            })
+
+      }
 
       const saveVTR = (event) => {
             let newD = false

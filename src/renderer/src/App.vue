@@ -1,5 +1,6 @@
 <template>
   <Toast position="bottom-right" />
+  <ConfirmDialog />
   <Tabs @tab="changeTab" />
   <Config id="configMenu" v-if="toggleConfigMenu" @closeMenu="toggleMenu" v-model:vtrList="vtrList"
     @removeVTR="removeVTR" @saveVTR="saveVTR" @migrarVtr="migrarVtr" @populateVTR="populateVTR"
@@ -79,7 +80,6 @@
       </Column>
 
     </DataTable>
-    <ConfirmDialog />
   </div>
   <div id="pageTwo" class="is-hidden">
     <CustomToolbar type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"

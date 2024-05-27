@@ -110,12 +110,9 @@ autoUpdater.on('update-downloaded', async (info) => {
     })
 })
 
-app.on('will-quit', async () => await syncDB())
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+app.on('window-all-closed', (event) => {
+  event.preventDefault()
+  sync.checkSyncState().then(() => app.quit())
 })
 
 ipcMain.on('toggleTheme', (event) => {

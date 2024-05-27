@@ -13,6 +13,7 @@ async function auth() {
             .then(async response => result = response.data)
             .catch(error => {
                   console.error(error);
+                  console.log('line 16');
                   result = null;
             });
       return result
@@ -49,7 +50,7 @@ async function syncSendLocalDB(key) {
       let request = getRequestOptions('putDB', key);
       await axios.request(request)
             .then(response => console.log(response.status))
-            .catch(error => console.error(error));
+            .catch(error => { console.error(error); console.log('line 53'); });
       return 'sent'
 }
 
@@ -62,7 +63,7 @@ async function syncRecieveRemoteDB(key, date) {
                   db.insertFaturas(faturas);
                   db.insertVTR(vtr, true);
             })
-            .catch(error => console.error(error));
+            .catch(error => { console.error(error); console.log('line 65'); });
       return 'reload'
 }
 

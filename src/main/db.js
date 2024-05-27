@@ -4,6 +4,7 @@ const Database = require('better-sqlite3');
 console.log(app.getPath('userData'));
 let db = new Database((app.getPath('userData') + '/nova.db'));
 
+db.prepare('create table if not exists LastSync(id INTEGER PRIMARY KEY, syncTimestamp INTEGER)').run()
 db.prepare('create table if not exists Faturas(id INTEGER PRIMARY KEY, timestamp INTEGER, vtr TEXT, lt FLOAT, odometer INTEGER, price FLOAT)').run()
 db.prepare('create table if not exists FaturasTemp(id INTEGER PRIMARY KEY, timestamp INTEGER, vtr TEXT, lt FLOAT, odometer INTEGER, price FLOAT)').run()
 db.prepare('create table if not exists VTR(id INTEGER PRIMARY KEY, vtr TEXT, placa TEXT)').run()
@@ -44,6 +45,7 @@ function insertFaturas(data) {
             for (const item of data) insert.run(item);
       });
       insertMany(data);
+      setDBDate(Date.parse(new Date()))
 }
 
 /**
@@ -74,6 +76,7 @@ function insertVTR(data, many) {
             const insert = db.prepare('insert into VTR (vtr, placa) values (@vtr, @placa)')
             insert.run(data)
       }
+      setDBDate(Date.parse(new Date()))
 }
 
 /**
@@ -90,7 +93,7 @@ function updateFaturas(oldItem, newItem, type) {
             const update = db.prepare('update Faturas set timestamp = ?, vtr = ?, lt = ?, odometer = ?, price = ? where id = ?');
             update.run(newItem.timestamp, newItem.vtr, newItem.lt, newItem.odometer, newItem.price, oldItem.id)
       }
-
+      setDBDate(Date.parse(new Date()))
 }
 
 /**
@@ -101,6 +104,7 @@ function updateVTR(oldItem, newItem) {
       newItem = newItem
       const update = db.prepare('update VTR set vtr = ?, placa = ? where id = ?');
       update.run(newItem.vtr, newItem.placa, oldItem.id)
+      setDBDate(Date.parse(new Date()))
 }
 
 /**
@@ -114,6 +118,7 @@ function deleteEntry(table, items) {
                         db.prepare(`delete from ${table} where id = ?`).run(item.id)
             })
             multiQuery(items)
+            setDBDate(Date.parse(new Date()))
       } catch (error) {
             console.log(error);
       }
@@ -131,11 +136,17 @@ function backupExport(filePath) {
 function importBackup(filePath) {
       console.log(filePath);
       db = new Database(filePath)
+      setDBDate(Date.parse(new Date()))
 }
 
 function getDBDate() {
-      const stats = statSync(app.getPath('userData') + '/nova.db');
-      return Date.parse(stats.mtime)
+      const result = db.prepare('select * from LastSync').get()
+      return result.syncTimestamp
+}
+
+function setDBDate(timestamp) {
+      db.prepare('delete from LastSync').run()
+      db.prepare('insert into LastSync (syncTimestamp) values (?)').run(timestamp);
 }
 
 function deleteObsoleteBackup(regex, path) {
@@ -159,6 +170,6 @@ function close() {
 export default {
       getCombustivel, getVTR, getFaturasTemp, insertFaturas,
       insertVTR, insertFaturasTemp, deleteEntry, updateFaturas,
-      updateVTR, backupExport, importBackup, getDBDate,
-      deleteDBTable, close
+      updateVTR, backupExport, importBackup, deleteDBTable,
+      getDBDate, close
 }

@@ -272,7 +272,7 @@ function somarValorVtr(data) {
       for (let i = 0; i < data.length; i++) {
             let obj = data[i]
             if (!temp[obj.vtr]) temp[obj.vtr] = obj;
-            else temp[obj.vtr].cost += obj.cost;
+            else temp[obj.vtr].price += obj.price;
       };
       let result = [];
       for (let prop in temp) result.push(temp[prop]);

@@ -161,6 +161,7 @@ ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
     const doc = montarPDF(type, hasDate, hasVTR, data)
 
     writeFileSync(dir, doc.output(), 'ascii')
+    shell.openPath(dir)
     return dir
   }
 })

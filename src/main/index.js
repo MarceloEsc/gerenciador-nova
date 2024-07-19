@@ -277,8 +277,6 @@ ipcMain.on('import:DB', async (event) => {
 
 })
 
-setInterval(async () => syncDB(), 300000);
-
 const callParse = new PdfReader()
 
 ipcMain.handle('sendData:converter-pdf', (event, fullpath) => {
@@ -312,6 +310,8 @@ ipcMain.on('updateVTR', (event, oldData, newData) => db.updateVTR(JSON.parse(old
 ipcMain.on('updateFaturas', (event, oldData, newData, type) => db.updateFaturas(JSON.parse(oldData), JSON.parse(newData), type))
 
 ipcMain.on('checkSync', () => syncDB())
+
+setInterval(async () => syncDB(), 300000);
 
 async function syncDB() {
   let result = await sync.checkSyncState()

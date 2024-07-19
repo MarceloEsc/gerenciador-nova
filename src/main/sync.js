@@ -19,11 +19,12 @@ async function auth() {
       return result
 }
 
-async function checkSyncState() {
+async function checkSyncState(state) {
       let authRes = await auth();
       if (authRes.status == 'synced') return 'synced';
 
       if (authRes.auth == 'autenticado' && authRes.status == 'behind') {
+            if (state == 'close') return null
             let result;
             await dialog.showMessageBox(BrowserWindow.getFocusedWindow(), {
                   type: 'question',

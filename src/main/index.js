@@ -112,7 +112,7 @@ autoUpdater.on('update-downloaded', async (info) => {
 
 app.on('window-all-closed', (event) => {
   event.preventDefault()
-  sync.checkSyncState().then(() => app.quit())
+  sync.checkSyncState('close').then(() => app.quit())
 })
 
 ipcMain.on('toggleTheme', (event) => {

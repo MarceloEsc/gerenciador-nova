@@ -16,10 +16,10 @@
                         <Button type="button" @click="importDB" label="Importar" severity="primary" />
                         Importa backup feito pelo programa
                   </p>
-                  <p class="divider">
+                  <!-- <p class="divider">
                         <Button type="button" @click="checkSync" label="Sincronizar" severity="primary" />
                         Sincroniza seus dados manualmente na nuvem
-                  </p>
+                  </p> -->
                   <p>
                         <Button id="openManager" type="button" @click="openManager" icon="pi pi-angle-right"
                               label="Gerenciar VTRs" severity="primary" />
@@ -175,7 +175,7 @@
             managerBtn.toggle('pi-angle-down')
       }
 
-      const checkSync = () => ipcRenderer.send('checkSync')
+      /* const checkSync = () => ipcRenderer.send('checkSync') */
 </script>
 <style scoped>
       .view {

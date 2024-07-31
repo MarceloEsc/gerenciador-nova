@@ -13,7 +13,7 @@ import { getMetaData, importExcel, importExcelAll } from './importExcel.js'
 import { faturaLog } from './pdf-reader.js'
 import { populateVTR } from './vtr-handler.js'
 import db from './db.js'
-import sync from './sync.js'
+/* import sync from './sync.js' */
 
 //autoUpdater.forceDevUpdateConfig = true
 autoUpdater.autoDownload = false
@@ -57,7 +57,7 @@ function createWindow() {
   })
 
   //DONT FORGET FOR FUCK SAKE
-  mainWindow.webContents.on('did-finish-load', async () => await syncDB())
+  /* mainWindow.webContents.on('did-finish-load', async () => await syncDB()) */
 
   //handle _blank links
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -110,10 +110,10 @@ autoUpdater.on('update-downloaded', async (info) => {
     })
 })
 
-app.on('window-all-closed', (event) => {
+/* app.on('window-all-closed', (event) => {
   event.preventDefault()
   sync.checkSyncState('close').then(() => app.quit())
-})
+}) */
 
 ipcMain.on('toggleTheme', (event) => {
   let theme = nativeTheme.themeSource
@@ -309,11 +309,11 @@ ipcMain.on('updateVTR', (event, oldData, newData) => db.updateVTR(JSON.parse(old
 
 ipcMain.on('updateFaturas', (event, oldData, newData, type) => db.updateFaturas(JSON.parse(oldData), JSON.parse(newData), type))
 
-ipcMain.on('checkSync', () => syncDB())
+/* ipcMain.on('checkSync', () => syncDB())
 
-setInterval(async () => syncDB(), 300000);
+setInterval(async () => syncDB(), 300000); */
 
-async function syncDB() {
+/* async function syncDB() {
   let result = await sync.checkSyncState()
   if (result == 'reload') {
     mainWindow.webContents.send('reloadData')
@@ -321,4 +321,4 @@ async function syncDB() {
   console.log(result);
   mainWindow.webContents.send('requestStatus', result)
   return result
-}
+} */

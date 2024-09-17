@@ -23,13 +23,11 @@
             <template #center v-if="props.type === 'manutencao'">
                   <Button icon="pi pi-times" @click="cancelImportWatch('arquivoExcel')" severity="contrast"
                         rounded="true" outlined="true" style="border: 0; margin-right: 10px"
-                        v-if="excelPages[0].label != 'Vazio'" />
+                        v-if="excelLoaded == true" />
+                  <ProgressSpinner v-if="load == true" style="width: 30px; height: 30px; margin-right: 20px;" />
 
-                  <Dropdown v-model="selectedPage" :options="excelPages" placeholder="Escolha a página"
-                        optionLabel="label" optionValue="label" style="min-width: 7.2rem" class="excel-drop"
-                        @change="confirmImport(selectedPage, 'arquivoExcel')" />
                   <input type="file" id="arquivoExcel" accept=".xlsx" @change="textPathAndImportExcel('arquivoExcel')"
-                        multiple class="pdf-input">
+                        class="pdf-input">
             </template>
             <template #end>
                   <Button label="Importar PDF" severity="primary" @click="emit('openModal', true)"
@@ -43,66 +41,42 @@
       import Toolbar from 'primevue/toolbar';
       import TieredMenu from 'primevue/tieredmenu';
       import Button from "primevue/button";
-      import Dropdown from 'primevue/dropdown';
+      import ProgressSpinner from 'primevue/progressspinner';
 
-      const props = defineProps(['type', 'combHasVTRFilter', 'combHasDateFilter', 'manHasVTRFilter', 'manHasDateFilter', 'combDataTable', 'manDataTable', 'vtr_list'])
-      const emit = defineEmits(['importResExcel', 'manutencaoExportState', 'openModal'])
+      const props = defineProps(['type', 'combHasVTRFilter', 'combHasDateFilter', 'manHasVTRFilter', 'manHasDateFilter', 'combDataTable', 'manDataTable'])
+      const emit = defineEmits(['importResExcel', 'openModal'])
       const ipcRenderer = window.electron.ipcRenderer
       const toast = useToast();
 
       onMounted(() => {
             if (props.type == 'manutencao') {
-                  ipcRenderer.on('importRes:Excel', (res, data, type) => {
-                        if (type == 'load') {
-                              excelPages.value = data
-                              excelPages.value.unshift({ label: 'Tudo' })
-                              return
-                        }
-                        if (type == 'multiple') {
-                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Visualização em tempo real está desativada para múltiplos arquivos', life: 3000 })
-                        }
+                  ipcRenderer.on('importRes:Excel', (res, data, manVtr, manPlaca) => {
                         console.log(data);
-                        manutencaoExportState.value = data
-                        emit('importResExcel', data)
+                        load.value = false
+                        excelLoaded.value = true
+                        emit('importResExcel', data, manVtr, manPlaca)
                   })
             }
       })
 
-      const manutencaoExportState = ref([])
       const textPathAndImportExcel = (path) => {
             selectedPage.value = null
             let files = document.getElementById(path).files
 
-            if (files.length > 1) {
-                  let filesSelected = []
-                  for (let file of files) {
-                        filesSelected.push(file.path)
-                  }
-                  emit('manutencaoExportState', null)
-                  ipcRenderer.send('import:ExcelMultiple', JSON.stringify(filesSelected), 'load')
-                  return
-            }
-            if (files.length > 0) {
-                  ipcRenderer.send('import:Excel', files[0].path, 'load')
-                  return
-            }
-            ipcRenderer.send('import:Excel', null)
-            excelPages.value = [{ label: 'Vazio' }]
-      }
+            let fullpath = files[0].path;
+            console.log(document.getElementById(path));
 
-      const confirmImport = (selectedWorksheet, path) => {
-            if (selectedWorksheet == 'Vazio') return
-            console.log(selectedWorksheet);
-            let fullpath = document.getElementById(path).files[0].path;
-            if (selectedWorksheet == 'Tudo') {
-                  emit('manutencaoExportState', null)
+            if (files.length > 0) {
+                  load.value = true
                   ipcRenderer.send('import:Excel', fullpath, 'all')
                   return
             }
-            emit('manutencaoExportState', selectedWorksheet)
-            ipcRenderer.send('import:Excel', fullpath, 'import', selectedWorksheet)
+            ipcRenderer.send('import:Excel', null)
       }
+
+
       const cancelImportWatch = (path) => {
+            excelLoaded.value = false
             document.getElementById(path).value = null
             textPathAndImportExcel(path)
       }
@@ -133,7 +107,7 @@
                               return
                         }
                         else if (!props.manHasDateFilter && !props.manHasVTRFilter.state) {
-                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma VTR para exportar!', life: 3000 })
+                              toast.add({ severity: 'warn', summary: 'Atenção', detail: 'Escolha uma VTR e Placa para exportar!', life: 3000 })
                               return
                         }
                         ipcRenderer.send('export:PDF', type, JSON.stringify(props.manHasDateFilter), JSON.stringify(props.manHasVTRFilter), JSON.stringify(props.manDataTable.processedData))
@@ -142,9 +116,8 @@
       ]
 
       const selectedPage = ref()
-      const excelPages = ref([
-            { label: 'Vazio' }
-      ])
+      const excelLoaded = ref(false)
+      const load = ref(false)
 </script>
 <style scoped>
       .tiered-menu-item {

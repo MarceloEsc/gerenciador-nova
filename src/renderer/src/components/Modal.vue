@@ -89,6 +89,7 @@
       const confirm = useConfirm()
 
       import { convert } from '../scripts/convert';
+      import { v4 as uuidv4 } from 'uuid';
 
       const props = defineProps(['type', 'combDataTable', 'manDataTable', 'vtrList'])
       const emit = defineEmits(['closeModal', 'requestCombustivelData'])
@@ -152,6 +153,7 @@
 
       const addNewItem = () => {
             const obj = {
+                  id: uuidv4(),
                   timestamp: convert.convertDateToFormatString(new Date()),
                   vtr: 'VTR 00',
                   lt: null,

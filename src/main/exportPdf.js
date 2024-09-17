@@ -1,11 +1,12 @@
 const { jsPDF } = require("jspdf");
 const { readFileSync } = require('fs');
 const { join } = require('path')
+import db from './db.js'
 
 /**
  * @param {string} type
  * @param {{timestamp: string, state: boolean}} hasDate
- * @param {{vtr: string, state: boolean}} hasVTR
+ * @param {{vtr: string, placa: string, state: boolean}} hasVTR
  * @param {Array} data
  */
 export function montarPDF(type, hasDate, hasVTR, data) {
@@ -140,7 +141,7 @@ export function montarPDF(type, hasDate, hasVTR, data) {
       }
 
       ///////MANUTENÇÃO//////////////////////////////////
-      doc.text("Histórico de Manutenção", pageWidth / 2, 33, { align: 'center' });
+      doc.text("Histórico de Manutenção", pageWidth / 2, 32, { align: 'center' });
 
       let i = 1
       let total = 0
@@ -151,11 +152,10 @@ export function montarPDF(type, hasDate, hasVTR, data) {
 
       //VTR E MES
       if (hasVTR.state && hasDate) {
-            doc.text(`GASTOS GERAIS DE ${data[0].vtr}-${hasDate}`, pageWidth / 2, 38.5, { align: 'center' });
+            doc.text(`GASTOS GERAIS DE ${data[0].vtr}-${hasVTR.placa} - ${hasDate}`, pageWidth / 2, 38.5, { align: 'center' });
             doc.setFontSize(10);
             doc.text("ITENS", 10, 55);
-            doc.text("VTR", 100, 55);
-            doc.text("DATA", 120, 55);
+            doc.text("VTR", 120, 55);
             doc.text("VALOR", 165, 55);
             doc.line(0, 58, 250, 58, 'S')
             doc.setFontSize(8);
@@ -167,10 +167,10 @@ export function montarPDF(type, hasDate, hasVTR, data) {
 
                   doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
 
-                  doc.text(`${manut.vtr}`, 100, altura + (i2 * 7));
-                  doc.text(`${manut.date}`, 120, altura + (i2 * 7));
+                  doc.text(`${manut.vtr}-${manut.placa}`, 120, altura + (i2 * 7));
                   doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
 
+                  let firstItem = true
                   manut.items.forEach(item => {
                         if (i >= limite - 1 && page <= page + 1) {
                               doc.addPage()
@@ -179,7 +179,22 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                               altura = 10
                               limite = 40
                         }
-                        doc.text(`${item.name} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
+                        let itemText = item.name + " " + item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })
+                        if (itemText.length > 83) {
+                              let firstHalf = itemText.slice(0, 83)
+                              let lastHalf = itemText.slice(-(itemText.length - 83))
+                              doc.text(`${firstHalf}`, 10, altura + (i * 7))
+                              i++
+                              if (firstItem == true) {
+                                    doc.setFillColor(fillColor[1])
+                                    doc.rect(0, altura + ((i2 + 1) * 7) - 4.5, 220, 7, 'F')
+                              }
+                              doc.text(`${lastHalf}`, 10, altura + (i * 7))
+                        }
+                        else {
+                              doc.text(`${itemText}`, 10, altura + (i * 7))
+                        }
+                        firstItem = false
                         i++
                   })
 
@@ -204,9 +219,10 @@ export function montarPDF(type, hasDate, hasVTR, data) {
 
                   doc.line(0, altura - 4.67 + (i * 7), 220, altura - 4.67 + (i * 7), 'S')
 
-                  doc.text(`${manut.vtr}`, 120, altura + (i2 * 7));
+                  doc.text(`${manut.vtr}-${manut.placa}`, 120, altura + (i2 * 7));
                   doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
 
+                  let firstItem = true
                   manut.items.forEach(item => {
                         if (i >= limite - 1 && page <= page + 1) {
                               doc.addPage()
@@ -215,7 +231,23 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                               altura = 10
                               limite = 40
                         }
-                        doc.text(`${item.name} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
+                        let itemText = item.name + " " + item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })
+                        if (itemText.length > 83) {
+                              let firstHalf = itemText.slice(0, 83)
+                              let lastHalf = itemText.slice(-(itemText.length - 83))
+
+                              doc.text(`${firstHalf}`, 10, altura + (i * 7))
+                              i++
+                              if (firstItem == true) {
+                                    doc.setFillColor(fillColor[1])
+                                    doc.rect(0, altura + ((i2 + 1) * 7) - 4.5, 220, 7, 'F')
+                              }
+                              doc.text(`${lastHalf}`, 10, altura + (i * 7))
+                        }
+                        else {
+                              doc.text(`${itemText}`, 10, altura + (i * 7))
+                        }
+                        firstItem = false
                         i++
                   })
 
@@ -225,7 +257,7 @@ export function montarPDF(type, hasDate, hasVTR, data) {
       }
       //GERAL VTR
       else if (hasVTR.state && !hasDate) {
-            doc.text(`GASTOS GERAIS DE ${hasVTR.vtr}`, pageWidth / 2, 38.5, { align: 'center' });
+            doc.text(`GASTOS GERAIS DE ${hasVTR.vtr}-${hasVTR.placa}`, pageWidth / 2, 38.5, { align: 'center' });
             doc.setFontSize(10);
             doc.text("ITENS", 10, 55);
             doc.text("DATA", 120, 55);
@@ -243,6 +275,7 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                   doc.text(`${manut.date}`, 120, altura + (i2 * 7));
                   doc.text(`Valor Total: ${manut.totalCost.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 165, altura + (i2 * 7));
 
+                  let firstItem = true
                   manut.items.forEach(item => {
                         if (i >= limite - 1 && page <= page + 1) {
                               doc.addPage()
@@ -251,7 +284,23 @@ export function montarPDF(type, hasDate, hasVTR, data) {
                               altura = 10
                               limite = 40
                         }
-                        doc.text(`${item.name} ${item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })}`, 10, altura + (i * 7))
+                        let itemText = item.name + " " + item.price.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' })
+
+                        if (itemText.length > 83) {
+                              let firstHalf = itemText.slice(0, 83)
+                              let lastHalf = itemText.slice(-(itemText.length - 83))
+                              doc.text(`${firstHalf}`, 10, altura + (i * 7))
+                              i++
+                              if (firstItem == true) {
+                                    doc.setFillColor(fillColor[1])
+                                    doc.rect(0, altura + ((i2 + 1) * 7) - 4.5, 220, 7, 'F')
+                              }
+                              doc.text(`${lastHalf}`, 10, altura + (i * 7))
+                        }
+                        else {
+                              doc.text(`${itemText}`, 10, altura + (i * 7))
+                        }
+                        firstItem = false
                         i++
                   })
 
@@ -277,5 +326,17 @@ function somarValorVtr(data) {
       let result = [];
       for (let prop in temp) result.push(temp[prop]);
 
+      return result
+}
+
+function findVTR(data) {
+      let VTRlist = db.getVTR()
+      let result
+      //console.log(VTRlist);
+      VTRlist.forEach(item => {
+            if (item.vtr == data.vtr) {
+                  result = item.placa
+            }
+      });
       return result
 }

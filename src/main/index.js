@@ -144,9 +144,15 @@ ipcMain.on('export:PDF', async (event, type, hasDate, hasVTR, data) => {
   }
 
   if (type == 'manutencao') {
+    let date
+    if (hasDate) {
+      date = hasDate.split('/')
+      date = date[0] + '-' + date[1]
+    }
+
     if (hasVTR.state && !hasDate) fileName = 'Manutenção-' + data[0].vtr
-    else if (!hasVTR.state && hasDate) fileName = 'Manutenção-' + hasDate
-    else if (type == 'manutencao') fileName = 'Manutenção-' + data[0].vtr + '-' + hasDate
+    else if (!hasVTR.state && hasDate) fileName = 'Manutenção-' + date
+    else if (type == 'manutencao') fileName = 'Manutenção-' + data[0].vtr + '-' + date
   }
   fileName = fileName + '.pdf'
 
@@ -207,37 +213,14 @@ ipcMain.on('import:Excel', async (event, fullpath, type, workSheet) => {
   console.log(fullpath);
   watcher = watch(fullpath, watcherFunc)
 
-  if (type == 'load') {
-    getMetaData(fullpath).then(value => {
-      event.reply('importRes:Excel', value, type)
-    })
-    return
-  }
-  else if (type == 'all') {
+  if (type == 'all') {
     importExcelAll(fullpath).then(items => {
-      event.reply('importRes:Excel', items, type)
+      event.reply('importRes:Excel', items.items, items.manVtr, items.manPlaca)
     }).catch(err => {
       console.log(err);
     })
     return
   }
-  importExcel(fullpath, workSheet).then(value => {
-    console.log(value);
-    event.reply('importRes:Excel', value, type)
-  })
-})
-
-ipcMain.on('import:ExcelMultiple', async (event, files) => {
-  files = JSON.parse(files)
-  let data = []
-  Promise.all(files.map(async path => {
-    let items = await importExcelAll(path)
-    data = data.concat(items)
-  }))
-    .then(() => {
-      console.log('reply');
-      event.reply('importRes:Excel', data, 'multiple')
-    })
 })
 
 ipcMain.on('export:DB', async (event) => {

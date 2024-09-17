@@ -1,7 +1,7 @@
 const Excel = require('exceljs');
 const { v4: uuidv4 } = require("uuid");
 
-export async function getMetaData(fileName) {
+async function getMetaData(fileName) {
       const wb = new Excel.Workbook();
       await wb.xlsx.readFile(fileName);
       let sheets = []
@@ -10,7 +10,8 @@ export async function getMetaData(fileName) {
       })
       return sheets
 }
-export async function importExcel(fileName, workSheet) {
+
+async function importExcel(fileName, workSheet) {
       const wb = new Excel.Workbook();
       await wb.xlsx.readFile(fileName);
       const sheet = wb.getWorksheet(workSheet)
@@ -76,7 +77,7 @@ export async function importExcel(fileName, workSheet) {
                               placa: (yearData[m].text).slice(-7),
                               name: sheet.getCell(row + i, col).value,
                               price: sheet.getCell(row + i, col + 1).value,
-                              date: formatDate(date.slice(0, -3)) + date.slice(-3)
+                              date: formatDate(date.slice(0, -3))
                         })
                         i++
                   }
@@ -88,7 +89,7 @@ export async function importExcel(fileName, workSheet) {
       return items
 }
 
-export async function importExcelAll(fileName) {
+async function importExcelAll(fileName) {
       let sheetsToParse
       let itemsArr = []
       await getMetaData(fileName).then(sheets => { sheetsToParse = sheets })
@@ -103,6 +104,7 @@ export async function importExcelAll(fileName) {
                   })
                   .catch(err => { console.log(err); })
       }
+      //console.log(itemsArr);
 
       let manVtr = [], manPlaca = []
       let vtr = 'a', placa = 'a'
@@ -119,11 +121,9 @@ export async function importExcelAll(fileName) {
             manPlaca: manPlaca
       }
 
-
-      //console.log(allItems);
-
       return allItems
 }
+
 
 function unirItems(data) {
       let temp = {};
@@ -156,6 +156,18 @@ function formatDate(date) {
             "JUL", "AGO", "SET", "OUT", "NOV", "DEC"
       ]
       date = months.indexOf(date) + 1
-      if (date < 10) date = "0" + date
       return date
 }
+
+let file = 'C:/marcelinho/MANUTENÇÃO-VTRS2.xlsx'
+let sheet
+/* getMetaData(file).then(sheets => {
+      sheet = sheets[0]
+      console.log(sheet);
+}).then(() => {
+      importExcel(file, sheet).then(items => { console.log(items) })
+}) */
+
+importExcelAll(file).then(items => {
+      console.log(items.manPlaca); console.log(items.manVtr);
+})

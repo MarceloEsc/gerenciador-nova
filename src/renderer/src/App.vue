@@ -83,20 +83,31 @@
   </div>
   <div id="pageTwo" class="is-hidden">
     <CustomToolbar type="manutencao" :manDataTable="manDataTable" :manHasVTRFilter="manHasVTRFilter"
-      :manHasDateFilter="manHasDateFilter" :vtrList="vtrList" @importResExcel="importResExcel"
-      @manutencaoExportState="setManState" />
+      :manHasDateFilter="manHasDateFilter" @importResExcel="importResExcel" />
 
     <DataTable ref="manDataTable" :value="manItems" dataKey="_id" @update:filters="handleFilters($event, 'manutencao')"
       v-model:filters="filtersMan" filterDisplay="row">
 
+      <Column field="placa" header="Placa" style="width: 15%">
+        <template #filter="{ filterModel, filterCallback }">
+          <Dropdown v-model="filterModel.value" @change="filterCallback()" filter :options="manPlacaList"
+            optionLabel="placa" optionValue="placa" placeholder="Placa" class="p-column-filter"
+            style="min-width: 7.2rem" />
+        </template>
+      </Column>
+
       <Column field="vtr" header="VTR" style="width: 15%">
         <template #filter="{ filterModel, filterCallback }">
-          <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="vtrList" optionLabel="vtr"
+          <Dropdown v-model="filterModel.value" @change="filterCallback()" :options="manVtrList" optionLabel="vtr"
             optionValue="vtr" placeholder="VTR" class="p-column-filter" style="min-width: 7.2rem" />
         </template>
       </Column>
 
       <Column field="date" header="Data" style="width: 20%">
+        <template #filter="{ filterModel, filterCallback }">
+          <Calendar v-model="filterModel.value" view="month" dateFormat="mm/yy" @date-select="filterModel.value = convert.convertDateToMMYY($event).slice(3),
+            filterCallback()" selectionMode="range" style="min-width: 13rem" />
+        </template>
       </Column>
 
       <Column field="items" header="Itens" style="width: 30%">
@@ -218,7 +229,7 @@
     populateVTR()
   })
 
-  ipcRenderer.on('requestStatus', (event, result) => {
+  /* ipcRenderer.on('requestStatus', (event, result) => {
     switch (result) {
       case 'synced':
         toast.add({ severity: 'info', detail: 'Seus dados estão em dia', life: 2000 })
@@ -234,15 +245,18 @@
         break;
     }
 
-  })
+  }) */
 
 
-  const importResExcel = (data) => {
+  const importResExcel = (data, manVtr, manPlaca) => {
     //console.log(data);
     manItems.value = []
-    data.forEach(item => {
-      manItems.value.push(item)
-    })
+    manVtrList.value = []
+    manPlacaList.value = []
+
+    data.forEach(item => manItems.value.push(item))
+    manVtr.forEach(item => manVtrList.value.push(item))
+    manPlaca.forEach(item => manPlacaList.value.push(item))
     console.log(manItems.value);
   }
 
@@ -295,6 +309,8 @@
   }
   ///////////////////////////////////////////////////////////
   const vtrList = ref([])
+  const manVtrList = ref([/* { vtr: 'asd' } */])
+  const manPlacaList = ref([/* { placa: 'asd' } */])
 
   const populateVTR = () => {
     ipcRenderer.invoke('populateVTR').then(res => {
@@ -363,15 +379,15 @@
   });
   const filtersMan = ref({
     vtr: { value: null, matchMode: FilterMatchMode.EQUALS },
+    placa: { value: null, matchMode: FilterMatchMode.EQUALS },
+    date: { value: null, matchMode: FilterMatchMode.CONTAINS }
   });
 
   const combHasDateFilter = ref({ timestamp: null, state: false })
   const combHasVTRFilter = ref({ vtr: null, state: false })
   const manHasDateFilter = ref()
-  const manHasVTRFilter = ref({ vtr: null, state: false })
-  const setManState = (date, vtr) => {
-    manHasDateFilter.value = date
-  }
+  const manHasVTRFilter = ref({ vtr: null, placa: null, state: false })
+  // TEST PDF DATE
   const handleFilters = (event, type) => {
     console.log(event);
     if (type === 'combustivel') {
@@ -396,14 +412,18 @@
       return
     }
 
-    if (event.vtr.value) {
+    if (event.vtr.value && event.placa.value) {
       manHasVTRFilter.value.state = true
       manHasVTRFilter.value.vtr = event.vtr.value
+      manHasVTRFilter.value.placa = event.placa.value
     }
     else {
       manHasVTRFilter.value.state = false
       manHasVTRFilter.value.vtr = event.vtr.value
     }
+    if (event.date.value) manHasDateFilter.value = event.date.value
+    else manHasDateFilter.value = null
+
     console.log(manHasDateFilter.value);
     console.log(manHasVTRFilter.value);
   }

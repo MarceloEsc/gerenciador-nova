@@ -53,12 +53,12 @@
         </template>
       </Column>
 
-      <Column field="odometer" header="Odômetro" style="width: 15%">
+      <!-- <Column field="odometer" header="Odômetro" style="width: 15%">
         <template #editor="{ data, field }">
           <InputNumber v-model="data[field]" :useGrouping="false" locale="pt-BR" style="width: 6rem"
             class="input-number-editor" />
         </template>
-      </Column>
+      </Column> -->
 
       <Column field="price" header="Valor" style="width: 15%">
         <template #body="{ data, field }">

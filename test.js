@@ -1,173 +1,138 @@
-const Excel = require('exceljs');
-const { v4: uuidv4 } = require("uuid");
+const { PdfReader } = require('pdfreader')
+const callParse = new PdfReader()
+let fullpath = "C:/marcelinho/relatorio-transacional-20241111_152036.pdf"
+callParse.parseFileItems(fullpath, faturaLog)
+let n = 0
+function fazerListaFatura(page) {
+      const parseObj = {
+            searchValue: [/Data utilização/gi, /Cidade/i],
+            fields: {
+                  date: 0,
+                  doc: 1,
+                  base: 2,
+                  cnpj: 3,
+                  driver: 4,
+                  tipo: 5,
+                  vtr: 6,
+                  produto: 7,
+                  lt: 8,
+                  price: 9,
+                  status: 10,
+                  estabelecimento: 11,
+                  city: 12
+            },
+      };
+      const keys = Object.keys(parseObj.fields);
+      let stageCounter = 0;
+      let list = [];
 
-async function getMetaData(fileName) {
-      const wb = new Excel.Workbook();
-      await wb.xlsx.readFile(fileName);
-      let sheets = []
-      wb.worksheets.forEach(sheet => {
-            sheets.push(sheet.name)
-      })
-      return sheets
-}
+      for (let row in page) {
 
-async function importExcel(fileName, workSheet) {
-      const wb = new Excel.Workbook();
-      await wb.xlsx.readFile(fileName);
-      const sheet = wb.getWorksheet(workSheet)
-
-      let items = []
-      const columnsArr = [0, 4, 8, 12, 16, 20]
-      //find years
-      let yearArr = []
-      let row = 1
-      sheet.columns[columnsArr[0]].eachCell((cell, rowNumber) => {
-            if (typeof cell.value == 'number') yearArr.push({ year: cell.value, row: rowNumber })
-            row = rowNumber + 1
-      })
-      yearArr.push({ year: null, row: row + 20 })
-      //console.log(yearArr);
-
-      //loop per year
-      for (let y = 0; y < yearArr.length; y++) {
-            if (yearArr[y].year == null) break
-
-            ////// GET MONTH TABLES ADDRESS
-            let yearBruteData = []
-            for (let c = 0; c < columnsArr.length; c++) {
-                  let arr = []
-                  sheet.columns[columnsArr[c]].eachCell((cell, rowNumber) => {
-                        if (rowNumber > yearArr[y].row && rowNumber < yearArr[y + 1].row) {
-                              if (typeof cell.value == 'string' && cell.value != null && cell.value.length >= 16) {
-                                    arr.push({
-                                          text: (cell.value).trim(),
-                                          row: rowNumber,
-                                          col: cell.col
-                                    })
-                              }
+            if (row.length > 0) {
+                  if (page[row].join("").search(parseObj.searchValue[stageCounter]) >= 0) {
+                        stageCounter++;
+                        if (stageCounter == parseObj.searchValue.length) stageCounter = 1;
+                  }
+                  else if (stageCounter == parseObj.searchValue.length - 1) {
+                        if (page[row].includes('Custo') || page[row].includes('Estabelecimento')) {
+                              continue
                         }
-                  })
-                  yearBruteData.push(arr)
-            }
 
-            //sort month table address
-            let yearData = []
-            for (let i = 0; i < 2; i++) {
-                  for (let b = 0; b < 6; b++) yearData.push(yearBruteData[b][i])
-            }
-            //console.log(yearData);
-            /////////////////////
+                        if (keys.length == page[row].length) {
+                              let data = {};
 
-            // GET TABLE ITEMS
-            for (let m = 0; m < yearData.length; m++) {
-                  let row = yearData[m].row + 2
-                  let col = yearData[m].col + 1
+                              keys.forEach((key) => {
+                                    const index = parseObj.fields[key];
+                                    const val = page[row][index];
+                                    data[key] = val;
+                              });
 
-                  let done = 0
-                  let i = 0
-                  while (done < 1) {
-                        if (sheet.getCell(row + i, col).value == null) {
-                              done++
-                              break
+                              list.push(data);
                         }
-                        let date = (yearData[m].text).slice(0, 7).trim()
-                        items.push({
-                              _id: uuidv4(),
-                              vtr: sheet.name,
-                              placa: (yearData[m].text).slice(-7),
-                              name: sheet.getCell(row + i, col).value,
-                              price: sheet.getCell(row + i, col + 1).value,
-                              date: formatDate(date.slice(0, -3))
-                        })
-                        i++
+                        else if (keys.length !== page[row].length) {
+                              let data2 = {};
+                              keys.forEach((key) => {
+                                    const index = parseObj.fields[key];
+                                    const val = page[row][index];
+                                    data2[key] = val;
+                              });
+                              list.push(data2);
+                        }
                   }
             }
       }
-      items = unirItems(items)
-      //console.log(items);
-
-      return items
+      let finalList = []
+      for (let i = 0; i < list.length; i += 2) {
+            if (i + 1 > list.length) break
+            list[i].cnpj = list[i].cnpj + " " + list[i + 1].doc
+            list[i].driver = list[i].driver + " " + list[i + 1].base
+            list[i].estabelecimento = list[i].estabelecimento + " " + list[i + 1].driver
+            list[i].price = list[i].price.slice(3)
+            finalList.push(list[i])
+            console.log(list[i]);
+      }
+      return finalList;
 }
 
-async function importExcelAll(fileName) {
-      let sheetsToParse
-      let itemsArr = []
-      await getMetaData(fileName).then(sheets => { sheetsToParse = sheets })
-      for (let i = 0; i < sheetsToParse.length; i++) {
-            await importExcel(fileName, sheetsToParse[i])
-                  .then(items => {
-                        if (items != undefined) {
-                              items.forEach(item => {
-                                    itemsArr.push(item);
-                              })
-                        }
-                  })
-                  .catch(err => { console.log(err); })
-      }
-      //console.log(itemsArr);
+let rows = [];
+let result = []
+function faturaLog(err, item) {
+      if (err) console.error(err);
+      else if (!item) {
+            // end of file, or page
+            let resultado = fazerListaFatura(rows);
 
-      let manVtr = [], manPlaca = []
-      let vtr = 'a', placa = 'a'
-      for (let i = 0; i < itemsArr.length; i++) {
-            if (itemsArr[i].vtr != vtr) manVtr.push({ vtr: itemsArr[i].vtr })
-            if (itemsArr[i].placa != placa) manPlaca.push({ placa: itemsArr[i].placa })
-            vtr = itemsArr[i].vtr
-            placa = itemsArr[i].placa
-      }
+            resultado.forEach(item => {
+                  result.push(item)
+            })
+            //console.log(resultado);
+            n++
+            console.log(n);
 
-      let allItems = {
-            items: itemsArr,
-            manVtr: manVtr,
-            manPlaca: manPlaca
+            handlePDFData(resultado)
+            rows = []; // clear rows for next page
+            return
       }
-
-      return allItems
+      else if (item.text) {
+            if (item.text.includes('Página') || item.text.includes('Total Geral do Contrato:')) {
+                  item = null
+                  faturaLog(err, item)
+                  return
+            }
+            (rows[item.y] = rows[item.y] || []).push(item.text);
+      }
 }
 
+//RECEBER OS DADOSC DO PDF E SALVAR NO DB
+function handlePDFData(dados) {
+      if (dados.length < 1) return
+      let data = []
+      console.log(dados);
 
-function unirItems(data) {
-      let temp = {};
-      for (let i = 0; i < data.length; i++) {
-            let obj = data[i]
-            if (!temp[obj.date]) {
-                  temp[obj.date] = obj;
-                  temp[obj.date].totalCost = obj.price;
-                  temp[obj.date].items = temp[obj.date].items ? temp[obj.date].items : [];
-                  temp[obj.date].items.push({ name: obj.name, price: obj.price })
+      dados.forEach(item => {
+
+            /* item.date = convert.convertDateToMilliseconds(item.date.slice(0, 10))
+
+            item.vtr = convertVTR(item.vtr)
+
+            if (item.lt !== undefined) {
+                  item.lt = parseFloat(item.lt.replace(/,/g, '.'))
             }
-            else {
-                  temp[obj.date].totalCost += obj.price;
-                  temp[obj.date].items = temp[obj.date].items ? temp[obj.date].items : [];
-                  temp[obj.date].items.push({ name: obj.name, price: obj.price })
-            }
-      };
-      let result = [];
-      for (let prop in temp) result.push(temp[prop]);
-      result.forEach(element => {
-            delete element.name
-            delete element.price
+            else if (item.lt === undefined) item.lt = null;
+
+            if (item.odometer === undefined) item.odometer = null;
+            else item.odometer = parseFloat(item.odometer)
+
+
+            if (item.price === undefined) item.price = null;
+            else item.price = parseFloat(item.price.replace(/,/g, '.'))
+
+            data.push({
+                  timestamp: item.date,
+                  vtr: item.vtr,
+                  lt: item.lt,
+                  odometer: item.odometer,
+                  price: item.price
+            }) */
       });
-      return result
 }
-
-function formatDate(date) {
-      const months = [
-            "JAN", "FEV", "MAR", "ABR", "MAIO", "JUN",
-            "JUL", "AGO", "SET", "OUT", "NOV", "DEC"
-      ]
-      date = months.indexOf(date) + 1
-      return date
-}
-
-let file = 'C:/marcelinho/MANUTENÇÃO-VTRS2.xlsx'
-let sheet
-/* getMetaData(file).then(sheets => {
-      sheet = sheets[0]
-      console.log(sheet);
-}).then(() => {
-      importExcel(file, sheet).then(items => { console.log(items) })
-}) */
-
-importExcelAll(file).then(items => {
-      console.log(items.manPlaca); console.log(items.manVtr);
-})

@@ -11,7 +11,8 @@
 
   <div id="pageOne">
     <CustomToolbar type="combustivel" :combDataTable="combDataTable" :combHasVTRFilter="combHasVTRFilter"
-      :combHasDateFilter="combHasDateFilter" :vtrList="vtrList" @openModal="handleModalVisibility" />
+      :combHasDateFilter="combHasDateFilter" :vtrList="vtrList" @openModal="handleModalVisibility" @delete="removeRow"
+      :showDelete />
     <CustomModal type="combustivel" :combDataTable="combDataTable" :vtrList="vtrList"
       v-model:modalVisible="combModalVisible" @closeModal="handleModalVisibility" v-if="combModalVisible"
       @requestCombustivelData="requestCombustivelData" />
@@ -20,9 +21,10 @@
       @click="logCurrentTableItems" /> -->
 
     <DataTable ref="combDataTable" :value="combItems" dataKey="id" v-model:editingRows="combEditingRows" editMode="row"
-      v-model:selection="combEditingRows" @row-edit-save="onRowEditSave($event, 'combustivel')"
-      @row-edit-cancel="console.log($event)" @update:filters="handleFilters($event, 'combustivel')"
-      v-model:filters="filters" filterDisplay="row">
+      @row-edit-save="onRowEditSave($event, 'combustivel')" @row-edit-cancel="console.log($event)"
+      @update:filters="handleFilters($event, 'combustivel')" v-model:filters="filters" filterDisplay="row"
+      v-model:selection="selectedItems" @rowSelect="checkIfDeleteShow" @rowUnselect="checkIfDeleteShow"
+      @rowSelectAll="checkIfDeleteShow" @rowUnselectAll="checkIfDeleteShow">
 
       <Column field="timestamp" header="Data" style="width: 20%">
         <template #editor="{ data, field }">
@@ -72,12 +74,14 @@
       <Column :rowEditor="true" style="width: 10%; min-width: 8rem" bodyStyle="text-align:center">
       </Column>
 
-      <Column style="width: 10%; min-width: 8rem" bodyStyle="text-align:center">
+      <Column selectionMode="multiple" headerStyle="width: 3rem" style="width: 10%;"></Column>
+
+      <!-- <Column style=" width: 10%; min-width: 8rem" bodyStyle="text-align:center">
         <template #body="{ data }">
           <Button type="button" label="Excluir" icon="pi pi-delete-left" severity="danger"
             @click="removeRow($event, data, 'combustivel')" />
         </template>
-      </Column>
+      </Column> -->
 
     </DataTable>
   </div>
@@ -169,6 +173,8 @@
   ])
   const combDataTable = ref();
   const combEditingRows = ref([]);
+  const selectedItems = ref([]);
+  const showDelete = ref(false)
 
   const manItems = ref([
     /* {
@@ -352,9 +358,9 @@
 
   const removeRow = (event, obj) => {
     confirm.require({
-      message: 'Deseja apagar essa transação?',
-      header: 'Confirme',
-      position: 'right',
+      message: 'Essa ação é irreversível?',
+      header: 'Apagar?',
+      position: 'top',
       rejectProps: {
         label: 'cancelar',
         severity: 'secondary',
@@ -365,12 +371,26 @@
         severity: 'danger',
       },
       accept: () => {
-        combItems.value = combItems.value.filter(item => item.id !== obj.id);
-        console.log(combItems.value);
-        obj = JSON.stringify([obj])
+        /* combItems.value = combItems.value.filter(item => item.id !== obj.id);
+        obj = JSON.stringify([obj]) */
+        selectedItems.value.forEach(selectedItem => {
+          combItems.value = combItems.value.filter(item => item.id !== selectedItem.id);
+        })
+        obj = JSON.stringify(selectedItems.value)
+        selectedItems.value = []
+        checkIfDeleteShow()
         ipcRenderer.send('deleteEntry', 'Faturas', obj)
       }
     })
+  }
+  const checkIfDeleteShow = () => {
+    setTimeout(() => {
+      if (selectedItems.value.length > 0) {
+        showDelete.value = true
+        return
+      }
+      showDelete.value = false
+    }, 100);
   }
 
   const filters = ref({

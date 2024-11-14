@@ -29,6 +29,9 @@
                   <input type="file" id="arquivoExcel" accept=".xlsx" @change="textPathAndImportExcel('arquivoExcel')"
                         class="pdf-input">
             </template>
+            <template #center v-if="props.type === 'combustivel' && showDelete">
+                  <Button label="Excluir" severity="primary" @click="emit('delete')" />
+            </template>
             <template #end>
                   <Button label="Importar PDF" severity="primary" @click="emit('openModal', true)"
                         v-if="props.type === 'combustivel'" />
@@ -43,8 +46,8 @@
       import Button from "primevue/button";
       import ProgressSpinner from 'primevue/progressspinner';
 
-      const props = defineProps(['type', 'combHasVTRFilter', 'combHasDateFilter', 'manHasVTRFilter', 'manHasDateFilter', 'combDataTable', 'manDataTable'])
-      const emit = defineEmits(['importResExcel', 'openModal'])
+      const props = defineProps(['type', 'showDelete', 'combHasVTRFilter', 'combHasDateFilter', 'manHasVTRFilter', 'manHasDateFilter', 'combDataTable', 'manDataTable'])
+      const emit = defineEmits(['importResExcel', 'openModal', 'delete'])
       const ipcRenderer = window.electron.ipcRenderer
       const toast = useToast();
 

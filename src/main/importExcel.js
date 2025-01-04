@@ -153,7 +153,7 @@ function unirItems(data) {
 function formatDate(date) {
       const months = [
             "JAN", "FEV", "MAR", "ABR", "MAIO", "JUN",
-            "JUL", "AGO", "SET", "OUT", "NOV", "DEC"
+            "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"
       ]
       date = months.indexOf(date) + 1
       if (date < 10) date = "0" + date

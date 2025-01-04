@@ -358,7 +358,7 @@
 
   const removeRow = (event, obj) => {
     confirm.require({
-      message: 'Essa ação é irreversível?',
+      message: 'Essa ação é irreversível!',
       header: 'Apagar?',
       position: 'top',
       rejectProps: {
@@ -367,7 +367,7 @@
         outlined: true
       },
       acceptProps: {
-        label: 'excluir',
+        label: 'confirmar',
         severity: 'danger',
       },
       accept: () => {

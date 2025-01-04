@@ -30,7 +30,7 @@
                         class="pdf-input">
             </template>
             <template #center v-if="props.type === 'combustivel' && showDelete">
-                  <Button label="Excluir" severity="primary" @click="emit('delete')" />
+                  <Button label="Excluir" severity="danger" @click="emit('delete')" />
             </template>
             <template #end>
                   <Button label="Importar PDF" severity="primary" @click="emit('openModal', true)"
